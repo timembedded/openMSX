@@ -2,6 +2,7 @@
 #include "YM2413Okazaki.hh"
 #include "YM2413Burczynski.hh"
 #include "YM2413NukeYKT.hh"
+#include "YM2413Tim.hh"
 #include "YM2413OriginalNukeYKT.hh"
 #include "DeviceConfig.hh"
 #include "MSXException.hh"
@@ -48,6 +49,8 @@ static std::unique_ptr<YM2413Core> createCore(const DeviceConfig& config)
 		return std::make_unique<YM2413NukeYKT::YM2413>();
 	} else if (core == "Original-NukeYKT") {
 		return std::make_unique<YM2413OriginalNukeYKT::YM2413>(); // for debug
+	} else if (core == "Tim") {
+		return std::make_unique<YM2413Tim::YM2413>(); // exterimental
 	} else if (core.empty()) {
 		// The preferred way to select the core is via the <core> tag.
 		// But for backwards compatibility, when that tag is missing,

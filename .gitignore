@@ -15,3 +15,5 @@ core
 .vscode/
 __pycache__/
 .DS_Store
+*.vcxproj.user
+.vs/

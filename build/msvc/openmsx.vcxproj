@@ -862,6 +862,10 @@
     <ClCompile Include="$(OpenMSXSrcDir)\SVIPrinterPort.cc" />
     <ClCompile Include="$(OpenMSXSrcDir)\SVIPPI.cc" />
     <ClCompile Include="$(OpenMSXSrcDir)\MSXCielTurbo.cc" />
+    <ClCompile Include="..\..\src\sound\YM2413Tim.cc" />
+    <ClCompile Include="..\..\src\sound\YM2413TimChannel.cc" />
+    <ClCompile Include="..\..\src\sound\YM2413TimPatch.cc" />
+    <ClCompile Include="..\..\src\sound\YM2413TimSlot.cc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(OpenMSXSrcDir)\3rdparty\ImGuiFileDialog/CustomFont.h" />
@@ -1628,12 +1632,15 @@ popd</Command>
     <None Include="$(OpenMSXSrcDir)\SVIPrinterPort.hh" />
     <None Include="$(OpenMSXSrcDir)\SVIPPI.hh" />
     <None Include="$(OpenMSXSrcDir)\MSXCielTurbo.hh" />
+    <None Include="..\..\src\sound\YM2413TimTables.ii" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(OpenMSXSrcDir)\resource\openmsx.rc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(OpenMSXSrcDir)\sound\fake_windows.h" />
+    <ClInclude Include="..\..\src\sound\YM2413Tim.hh" />
+    <ClInclude Include="..\..\src\sound\YM2413TimCommon.hh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

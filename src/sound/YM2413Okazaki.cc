@@ -657,35 +657,44 @@ static constexpr std::array inst_data = {
 YM2413::YM2413()
 {
 	if (false) {
-		for (const auto& e : dB2LinTab) std::cout << e << ' ';
-		std::cout << '\n';
+        std::cout << "static const int dB2LinTab[] = {\n";
+        for (const auto& e : dB2LinTab) std::cout << e << ", ";
+        std::cout << "\n}\n\n";
 
-		for (const auto& e : arAdjustTab) std::cout << e << ' ';
-		std::cout << '\n';
+        std::cout << "static const int arAdjustTab[] = {\n";
+        for (const auto& e : arAdjustTab) std::cout << e << ", ";
+        std::cout << "\n}\n\n";
 
-		for (auto i : xrange(4)) {
-			for (auto j : xrange(16 * 8)) {
-				std::cout << int(tllTab[i][j]) << ' ';
-			}
-			std::cout << '\n';
-		}
-		std::cout << '\n';
+        std::cout << "static const int tllTab[4][16*8] = {\n";
+        for (auto i : xrange(4)) {
+            std::cout << "{\n";
+            for (auto j : xrange(16 * 8)) {
+                std::cout << int(tllTab[i][j]) << ", ";
+            }
+            std::cout << "\n},";
+        }
+        std::cout << "\n}\n\n";
 
-		for (const auto& e : fullSinTable) std::cout << e << ' ';
-		std::cout << '\n';
-		for (const auto& e : halfSinTable) std::cout << e << ' ';
-		std::cout << '\n';
+        std::cout << "static const int fullSinTable[] = {\n";
+        for (const auto& e : fullSinTable) std::cout << e << ", ";
+        std::cout << "\n}\n\n";
+        std::cout << "static const int halfSinTable[] = {\n";
+        for (const auto& e : halfSinTable) std::cout << e << ", ";
+        std::cout << "\n}\n\n";
 
-		for (auto i : xrange(16)) {
-			for (auto j : xrange(16)) {
-				std::cout << dPhaseDrTab[i][j] << ' ';
-			}
-			std::cout << '\n';
-		}
-		std::cout << '\n';
+        std::cout << "static const int dPhaseDrTab[16][16] = {\n";
+        for (auto i : xrange(16)) {
+            std::cout << "{\n";
+            for (auto j : xrange(16)) {
+                std::cout << dPhaseDrTab[i][j] << ", ";
+            }
+            std::cout << "\n},";
+        }
+        std::cout << "\n}\n\n";
 
-		for (const auto& e : slTab) std::cout << e << ' ';
-		std::cout << '\n';
+        std::cout << "static const int slTab[] = {\n";
+        for (const auto& e : slTab) std::cout << e << ", ";
+        std::cout << "\n}\n\n";
 	}
 
 	ranges::fill(reg, 0); // avoid UMR
