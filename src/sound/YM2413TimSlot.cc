@@ -86,20 +86,19 @@ namespace YM2413Tim {
             // table in the ym2413 application manual (table III-7, page
             // 13). For other chips like OPL1, OPL3 this ratio seems to be
             // different.
-            eg_dPhase = EnvPhaseIndex::create(
-                dPhaseDRTableRks[patch.AR] * 12);
+            eg_dPhase = dPhaseDRTableRks[patch.AR] * 12;
             break;
         case DECAY:
-            eg_dPhase = EnvPhaseIndex::create(dPhaseDRTableRks[patch.DR]);
+            eg_dPhase = dPhaseDRTableRks[patch.DR];
             break;
         case SUSTAIN:
-            eg_dPhase = EnvPhaseIndex::create(dPhaseDRTableRks[patch.RR]);
+            eg_dPhase = dPhaseDRTableRks[patch.RR];
             break;
         case RELEASE: {
             unsigned idx = sustain ? 5
                 : (patch.EG ? patch.RR
                     : 7);
-            eg_dPhase = EnvPhaseIndex::create(dPhaseDRTableRks[idx]);
+            eg_dPhase = dPhaseDRTableRks[idx];
             break;
         }
         case SETTLE:
@@ -116,11 +115,11 @@ namespace YM2413Tim {
             // state). Experiments showed that the with key-scaling the
             // output matches closer the real HW. Also all other states use
             // key-scaling.
-            eg_dPhase = EnvPhaseIndex::create(dPhaseDRTableRks[12]);
+            eg_dPhase = (dPhaseDRTableRks[12]);
             break;
         case SUSHOLD:
         case FINISH:
-            eg_dPhase = EnvPhaseIndex(0);
+            eg_dPhase = 0;
             break;
         }
     }
@@ -138,10 +137,10 @@ namespace YM2413Tim {
         state = state_;
         switch (state) {
         case ATTACK:
-            eg_phase_max = (patch.AR == 15) ? EnvPhaseIndex(0) : EG_DP_MAX;
+            eg_phase_max = (patch.AR == 15) ? 0 : EG_DP_MAX;
             break;
         case DECAY:
-            eg_phase_max = EnvPhaseIndex::create(narrow<int>(patch.SL));
+            eg_phase_max = narrow<int>(patch.SL);
             break;
         case SUSHOLD:
             eg_phase_max = EG_DP_INF;
@@ -168,7 +167,7 @@ namespace YM2413Tim {
     void Slot::slotOn()
     {
         setEnvelopeState(ATTACK);
-        eg_phase = EnvPhaseIndex(0);
+        eg_phase = 0;
         cPhase = 0;
     }
 
@@ -176,7 +175,7 @@ namespace YM2413Tim {
     void Slot::slotOn2()
     {
         setEnvelopeState(ATTACK);
-        eg_phase = EnvPhaseIndex(0);
+        eg_phase = 0;
     }
 
     // Slot key off
@@ -184,7 +183,7 @@ namespace YM2413Tim {
     {
         if (state == FINISH) return; // already in off state
         if (state == ATTACK) {
-            eg_phase = EnvPhaseIndex(arAdjustTab[eg_phase.toInt()]);
+            eg_phase = (arAdjustTab[eg_phase >> EP_FP_BITS /*.toInt()*/]) << EP_FP_BITS;
         }
         setEnvelopeState(RELEASE);
     }

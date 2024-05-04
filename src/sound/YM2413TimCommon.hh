@@ -1,7 +1,6 @@
 #pragma once
 
 #include "YM2413Core.hh"
-#include "FixedPoint.hh"
 #include "serialize_meta.hh"
 #include <array>
 #include <span>
@@ -12,7 +11,7 @@ namespace YM2413Tim {
     class YM2413;
 
     inline constexpr int EP_FP_BITS = 15;
-    using EnvPhaseIndex = FixedPoint<EP_FP_BITS>;
+    using EnvPhaseIndex = int32_t; //FixedPoint<EP_FP_BITS>;
 
     // Size of sin table
     inline constexpr int PG_BITS = 9;
@@ -71,8 +70,8 @@ namespace YM2413Tim {
     static constexpr unsigned LFO_AM_TAB_ELEMENTS = 210;
 
     // Extra (derived) constants
-    static constexpr EnvPhaseIndex EG_DP_MAX = EnvPhaseIndex(1 << 7);
-    static constexpr EnvPhaseIndex EG_DP_INF = EnvPhaseIndex(1 << 8); // as long as it's bigger
+    static constexpr EnvPhaseIndex EG_DP_MAX = (1 << 7) << EP_FP_BITS;
+    static constexpr EnvPhaseIndex EG_DP_INF = (1 << 8) << EP_FP_BITS; // as long as it's bigger
 
     //
     // Helper functions

@@ -2,7 +2,6 @@
 
 #include "YM2413Core.hh"
 #include "YM2413TimChannel.hh"
-#include "FixedPoint.hh"
 #include "serialize_meta.hh"
 #include <array>
 #include <span>

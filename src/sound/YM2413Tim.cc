@@ -267,7 +267,7 @@ namespace openmsx {
             switch (state) {
             case ATTACK:
                 out = 0;
-                eg_phase = EnvPhaseIndex(0);
+                eg_phase = 0;
                 setEnvelopeState(DECAY);
                 break;
             case DECAY:
@@ -309,7 +309,7 @@ namespace openmsx {
                 return out;
             }
             else {
-                unsigned out = eg_phase.toInt(); // in range [0, 128]
+                unsigned out = eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128]
                 if (state == ATTACK) {
                     out = arAdjustTab[out]; // [0, 128]
                 }
@@ -328,8 +328,8 @@ namespace openmsx {
         template<bool HAS_AM> unsigned Slot::calc_fixed_env() const
         {
             assert(state == one_of(SUSHOLD, FINISH));
-            assert(eg_dPhase == EnvPhaseIndex(0));
-            unsigned out = eg_phase.toInt(); // in range [0, 128)
+            assert(eg_dPhase == 0);
+            unsigned out = eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128)
             out = EG2DB(out + tll); // [0, 480)
             if constexpr (!HAS_AM) {
                 out |= 3;
