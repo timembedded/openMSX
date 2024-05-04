@@ -42,11 +42,11 @@ public:
     [[nodiscard]] int calc_slot_snare(bool noise);
     [[nodiscard]] int calc_slot_cym(unsigned phase7, unsigned phase8);
     [[nodiscard]] int calc_slot_hat(unsigned phase7, unsigned phase8, bool noise);
-    void updatePG(unsigned freq);
-    void updateTLL(unsigned freq, bool actAsCarrier);
-    void updateRKS(unsigned freq);
+    void updatePG(uint16_t freq);
+    void updateTLL(uint16_t freq, bool actAsCarrier);
+    void updateRKS(uint16_t freq);
     void updateEG();
-    void updateAll(unsigned freq, bool actAsCarrier);
+    void updateAll(uint16_t freq, bool actAsCarrier);
 
     template<typename Archive>
     void serialize(Archive& ar, unsigned version);
@@ -57,7 +57,7 @@ public:
 
     // for Phase Generator (PG)
     unsigned cPhase;        // Phase counter
-    std::array<unsigned, 8> dPhase; // Phase increment
+    std::array<uint16_t, 8> dPhase; // Phase increment
 
     // for Envelope Generator (EG)
     unsigned volume;             // Current volume

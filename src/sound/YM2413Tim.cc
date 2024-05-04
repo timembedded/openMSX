@@ -211,13 +211,13 @@ namespace openmsx {
                 if (flags & 0x01) keyOn_HH();  else keyOff_HH();
             }
 
-            unsigned freq6 = getFreq(6);
+            uint16_t freq6 = getFreq(6);
             ch6.mod.updateAll(freq6, false);
             ch6.car.updateAll(freq6, true);
-            unsigned freq7 = getFreq(7);
+            uint16_t freq7 = getFreq(7);
             ch7.mod.updateAll(freq7, isRhythm());
             ch7.car.updateAll(freq7, true);
-            unsigned freq8 = getFreq(8);
+            uint16_t freq8 = getFreq(8);
             ch8.mod.updateAll(freq8, isRhythm());
             ch8.car.updateAll(freq8, true);
         }
@@ -420,7 +420,7 @@ namespace openmsx {
             return (reg[0x0E] & 0x20) != 0;
         }
 
-        unsigned YM2413::getFreq(unsigned channel) const
+        uint16_t YM2413::getFreq(unsigned channel) const
         {
             // combined fnum (=9bit) and block (=3bit)
             assert(channel < 9);
@@ -763,7 +763,7 @@ namespace openmsx {
                     if ((reg[0x30 + i] & 0xF0) == 0) {
                         Channel& ch = channels[i];
                         ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                        unsigned freq = getFreq(i);
+                        uint16_t freq = getFreq(i);
                         ch.mod.updatePG(freq);
                         ch.mod.updateRKS(freq);
                         ch.mod.updateEG();
@@ -781,7 +781,7 @@ namespace openmsx {
                     if ((reg[0x30 + i] & 0xF0) == 0) {
                         Channel& ch = channels[i];
                         ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                        unsigned freq = getFreq(i);
+                        uint16_t freq = getFreq(i);
                         ch.car.updatePG(freq);
                         ch.car.updateRKS(freq);
                         ch.car.updateEG();
@@ -898,7 +898,7 @@ namespace openmsx {
                 unsigned cha = r & 0x0F; assert(cha < 9);
                 Channel& ch = channels[cha];
                 bool actAsCarrier = (cha >= 7) && isRhythm();
-                unsigned freq = getFreq(cha);
+                uint16_t freq = getFreq(cha);
                 ch.mod.updateAll(freq, actAsCarrier);
                 ch.car.updateAll(freq, true);
                 break;
@@ -920,7 +920,7 @@ namespace openmsx {
                 else {
                     ch.keyOff();
                 }
-                unsigned freq = getFreq(cha);
+                uint16_t freq = getFreq(cha);
                 ch.mod.updateAll(freq, modActAsCarrier);
                 ch.car.updateAll(freq, true);
                 break;
@@ -945,7 +945,7 @@ namespace openmsx {
                 }
                 ch.car.setVolume(data & 15);
                 bool actAsCarrier = (cha >= 7) && isRhythm();
-                unsigned freq = getFreq(cha);
+                uint16_t freq = getFreq(cha);
                 ch.mod.updateAll(freq, actAsCarrier);
                 ch.car.updateAll(freq, true);
                 break;
@@ -1042,7 +1042,7 @@ namespace openmsx {
                     }
                     // sync various variables
                     bool actAsCarrier = (i >= 7) && isRhythm();
-                    unsigned freq = getFreq(unsigned(i));
+                    uint16_t freq = getFreq(unsigned(i));
                     ch.mod.updateAll(freq, actAsCarrier);
                     ch.car.updateAll(freq, true);
                     ch.mod.setEnvelopeState(ch.mod.state);

@@ -45,7 +45,7 @@ namespace YM2413Tim {
         slot_on_flag = 0;
     }
 
-    void Slot::updatePG(unsigned freq)
+    void Slot::updatePG(uint16_t freq)
     {
         // Pre-calculate all phase-increments. The 8 different values are for
         // the 8 steps of the PM stuff (for mod and car phase calculation).
@@ -53,22 +53,22 @@ namespace YM2413Tim {
         // The original Okazaki core calculated the PM stuff in a different
         // way. This algorithm was copied from the Burczynski core because it
         // is much more suited for a (cheap) hardware calculation.
-        unsigned fnum = freq & 511;
-        unsigned block = freq / 512;
+        uint16_t fnum = freq & 511;
+        uint16_t block = freq / 512;
         for (auto [pm, dP] : enumerate(dPhase)) {
             unsigned tmp = ((2 * fnum + pmTable[fnum >> 6][pm]) * patch.ML) << block;
             dP = tmp >> (21 - DP_BITS);
         }
     }
 
-    void Slot::updateTLL(unsigned freq, bool actAsCarrier)
+    void Slot::updateTLL(uint16_t freq, bool actAsCarrier)
     {
         tll = patch.KL[freq >> 5] + (actAsCarrier ? volume : patch.TL);
     }
 
-    void Slot::updateRKS(unsigned freq)
+    void Slot::updateRKS(uint16_t freq)
     {
-        unsigned rks = freq >> patch.KR;
+        uint16_t rks = freq >> patch.KR;
         assert(rks < 16);
         dPhaseDRTableRks = dPhaseDrTab[rks];
     }
@@ -124,7 +124,7 @@ namespace YM2413Tim {
         }
     }
 
-    void Slot::updateAll(unsigned freq, bool actAsCarrier)
+    void Slot::updateAll(uint16_t freq, bool actAsCarrier)
     {
         updatePG(freq);
         updateTLL(freq, actAsCarrier);

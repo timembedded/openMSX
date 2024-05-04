@@ -43,7 +43,7 @@ namespace YM2413Tim {
         void setRhythmFlags(uint8_t old);
         void update_key_status();
         [[nodiscard]] bool isRhythm() const;
-        [[nodiscard]] unsigned getFreq(unsigned channel) const;
+        [[nodiscard]] uint16_t getFreq(unsigned channel) const;
 
         template<unsigned FLAGS>
         void calcChannel(Channel& ch, std::span<float> buf);

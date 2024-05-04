@@ -36,7 +36,7 @@ public:
     /** Sets sustain level [0..15]. */
     void setSL(uint8_t value);
 
-    std::span<const unsigned, PG_WIDTH> WF; // 0-1    transformed to waveform[0-1]
+    std::span<const uint16_t, PG_WIDTH> WF; // 0-1    transformed to waveform[0-1]
     std::span<const uint8_t, 16 * 8> KL;    // 0-3    transformed to tllTab[0-3]
     unsigned SL;        // 0-15   transformed to slTable[0-15]
     uint8_t AMPM = 0;   // 0-3    2 packed booleans
