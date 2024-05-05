@@ -29,14 +29,14 @@ private:
     // SoundDevice
     void setOutputRate(unsigned hostSampleRate, double speed) override;
     void generateChannels(std::span<float*> bufs, unsigned num) override;
-    [[nodiscard]] float getAmplificationFactorImpl() const override;
+    float getAmplificationFactorImpl() const override;
 
 private:
     const std::unique_ptr<YM2413Core> core;
 
     struct Debuggable final : SimpleDebuggable {
         Debuggable(MSXMotherBoard& motherBoard, const std::string& name);
-        [[nodiscard]] byte read(unsigned address) override;
+        byte read(unsigned address) override;
         void write(unsigned address, byte value, EmuTime::param time) override;
     } debuggable;
 };

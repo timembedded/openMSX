@@ -22,8 +22,6 @@ public:
     void generateChannels(std::span<float*, 9 + 5> bufs, unsigned num) override;
     [[nodiscard]] float getAmplificationFactor() const override;
 
-    [[nodiscard]] Patch& getPatch(unsigned instrument, bool carrier);
-
     template<typename Archive>
     void serialize(Archive& ar, unsigned version);
 
@@ -42,11 +40,10 @@ private:
     void keyOff_CYM();
     void setRhythmFlags(uint8_t old);
     void update_key_status();
-    [[nodiscard]] bool isRhythm() const;
-    [[nodiscard]] uint16_t getFreq(unsigned channel) const;
+    bool isRhythm() const;
+    uint16_t getFreq(unsigned channel) const;
 
-    template<unsigned FLAGS>
-    void calcChannel(Channel& ch, std::span<float> buf);
+    void calcChannel(Channel& ch, uint8_t FLAGS, std::span<float> buf);
 
 private:
     /** Channel & Slot */
@@ -67,6 +64,9 @@ private:
     /** Registers */
     std::array<uint8_t, 0x40> reg;
     uint8_t registerLatch;
+
+    /** Patches */
+    Patch& getPatch(unsigned instrument, bool carrier);
 };
 
 } // namespace YM2413Tim

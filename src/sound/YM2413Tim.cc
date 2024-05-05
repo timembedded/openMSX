@@ -265,8 +265,7 @@ Patch& YM2413::getPatch(unsigned instrument, bool carrier)
     return patches[instrument][carrier];
 }
 
-template<unsigned FLAGS>
-void YM2413::calcChannel(Channel& ch, std::span<float> buf)
+void YM2413::calcChannel(Channel& ch, uint8_t FLAGS, std::span<float> buf)
 {
     // VC++ requires explicit conversion to bool. Compiler bug??
     const bool HAS_CAR_PM = (FLAGS & 1) != 0;
@@ -286,16 +285,16 @@ void YM2413::calcChannel(Channel& ch, std::span<float> buf)
     unsigned tmp_am_phase = am_phase;
     unsigned car_fixed_env = 0; // dummy
     unsigned mod_fixed_env = 0; // dummy
-    if constexpr (HAS_CAR_FIXED_ENV) {
+    if (HAS_CAR_FIXED_ENV) {
         car_fixed_env = ch.car.calc_fixed_env(HAS_CAR_AM);
     }
-    if constexpr (HAS_MOD_FIXED_ENV) {
+    if (HAS_MOD_FIXED_ENV) {
         mod_fixed_env = ch.mod.calc_fixed_env(HAS_MOD_AM);
     }
 
     for (auto& b : buf) {
         unsigned lfo_pm = 0;
-        if constexpr (HAS_CAR_PM || HAS_MOD_PM) {
+        if (HAS_CAR_PM || HAS_MOD_PM) {
             // Copied from Burczynski:
             //  There are only 8 different steps for PM, and each
             //  step lasts for 1024 samples. This results in a PM
@@ -304,7 +303,7 @@ void YM2413::calcChannel(Channel& ch, std::span<float> buf)
             lfo_pm = (tmp_pm_phase >> 10) & 7;
         }
         int lfo_am = 0; // avoid warning
-        if constexpr (HAS_CAR_AM || HAS_MOD_AM) {
+        if (HAS_CAR_AM || HAS_MOD_AM) {
             ++tmp_am_phase;
             if (tmp_am_phase == (LFO_AM_TAB_ELEMENTS * 64)) {
                 tmp_am_phase = 0;
@@ -325,9 +324,6 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
     for (auto i : xrange(isRhythm() ? 6 : 9)) {
         Channel& ch = channels[i];
         if (ch.car.isActive()) {
-            // Below we choose between 128 specialized versions of
-            // calcChannel(). This allows to move a lot of
-            // conditional code out of the inner-loop.
             bool carFixedEnv = ch.car.state == one_of(SUSHOLD, FINISH);
             bool modFixedEnv = ch.mod.state == one_of(SUSHOLD, FINISH);
             if (ch.car.state == SETTLE) {
@@ -338,137 +334,7 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
                 ((ch.mod.patch.FB != 0) << 4) |
                 (carFixedEnv << 5) |
                 (modFixedEnv << 6);
-            switch (flags) {
-            case   0: calcChannel<  0>(ch, { bufs[i], num }); break;
-            case   1: calcChannel<  1>(ch, { bufs[i], num }); break;
-            case   2: calcChannel<  2>(ch, { bufs[i], num }); break;
-            case   3: calcChannel<  3>(ch, { bufs[i], num }); break;
-            case   4: calcChannel<  4>(ch, { bufs[i], num }); break;
-            case   5: calcChannel<  5>(ch, { bufs[i], num }); break;
-            case   6: calcChannel<  6>(ch, { bufs[i], num }); break;
-            case   7: calcChannel<  7>(ch, { bufs[i], num }); break;
-            case   8: calcChannel<  8>(ch, { bufs[i], num }); break;
-            case   9: calcChannel<  9>(ch, { bufs[i], num }); break;
-            case  10: calcChannel< 10>(ch, { bufs[i], num }); break;
-            case  11: calcChannel< 11>(ch, { bufs[i], num }); break;
-            case  12: calcChannel< 12>(ch, { bufs[i], num }); break;
-            case  13: calcChannel< 13>(ch, { bufs[i], num }); break;
-            case  14: calcChannel< 14>(ch, { bufs[i], num }); break;
-            case  15: calcChannel< 15>(ch, { bufs[i], num }); break;
-            case  16: calcChannel< 16>(ch, { bufs[i], num }); break;
-            case  17: calcChannel< 17>(ch, { bufs[i], num }); break;
-            case  18: calcChannel< 18>(ch, { bufs[i], num }); break;
-            case  19: calcChannel< 19>(ch, { bufs[i], num }); break;
-            case  20: calcChannel< 20>(ch, { bufs[i], num }); break;
-            case  21: calcChannel< 21>(ch, { bufs[i], num }); break;
-            case  22: calcChannel< 22>(ch, { bufs[i], num }); break;
-            case  23: calcChannel< 23>(ch, { bufs[i], num }); break;
-            case  24: calcChannel< 24>(ch, { bufs[i], num }); break;
-            case  25: calcChannel< 25>(ch, { bufs[i], num }); break;
-            case  26: calcChannel< 26>(ch, { bufs[i], num }); break;
-            case  27: calcChannel< 27>(ch, { bufs[i], num }); break;
-            case  28: calcChannel< 28>(ch, { bufs[i], num }); break;
-            case  29: calcChannel< 29>(ch, { bufs[i], num }); break;
-            case  30: calcChannel< 30>(ch, { bufs[i], num }); break;
-            case  31: calcChannel< 31>(ch, { bufs[i], num }); break;
-            case  32: calcChannel< 32>(ch, { bufs[i], num }); break;
-            case  33: calcChannel< 33>(ch, { bufs[i], num }); break;
-            case  34: calcChannel< 34>(ch, { bufs[i], num }); break;
-            case  35: calcChannel< 35>(ch, { bufs[i], num }); break;
-            case  36: calcChannel< 36>(ch, { bufs[i], num }); break;
-            case  37: calcChannel< 37>(ch, { bufs[i], num }); break;
-            case  38: calcChannel< 38>(ch, { bufs[i], num }); break;
-            case  39: calcChannel< 39>(ch, { bufs[i], num }); break;
-            case  40: calcChannel< 40>(ch, { bufs[i], num }); break;
-            case  41: calcChannel< 41>(ch, { bufs[i], num }); break;
-            case  42: calcChannel< 42>(ch, { bufs[i], num }); break;
-            case  43: calcChannel< 43>(ch, { bufs[i], num }); break;
-            case  44: calcChannel< 44>(ch, { bufs[i], num }); break;
-            case  45: calcChannel< 45>(ch, { bufs[i], num }); break;
-            case  46: calcChannel< 46>(ch, { bufs[i], num }); break;
-            case  47: calcChannel< 47>(ch, { bufs[i], num }); break;
-            case  48: calcChannel< 48>(ch, { bufs[i], num }); break;
-            case  49: calcChannel< 49>(ch, { bufs[i], num }); break;
-            case  50: calcChannel< 50>(ch, { bufs[i], num }); break;
-            case  51: calcChannel< 51>(ch, { bufs[i], num }); break;
-            case  52: calcChannel< 52>(ch, { bufs[i], num }); break;
-            case  53: calcChannel< 53>(ch, { bufs[i], num }); break;
-            case  54: calcChannel< 54>(ch, { bufs[i], num }); break;
-            case  55: calcChannel< 55>(ch, { bufs[i], num }); break;
-            case  56: calcChannel< 56>(ch, { bufs[i], num }); break;
-            case  57: calcChannel< 57>(ch, { bufs[i], num }); break;
-            case  58: calcChannel< 58>(ch, { bufs[i], num }); break;
-            case  59: calcChannel< 59>(ch, { bufs[i], num }); break;
-            case  60: calcChannel< 60>(ch, { bufs[i], num }); break;
-            case  61: calcChannel< 61>(ch, { bufs[i], num }); break;
-            case  62: calcChannel< 62>(ch, { bufs[i], num }); break;
-            case  63: calcChannel< 63>(ch, { bufs[i], num }); break;
-            case  64: calcChannel< 64>(ch, { bufs[i], num }); break;
-            case  65: calcChannel< 65>(ch, { bufs[i], num }); break;
-            case  66: calcChannel< 66>(ch, { bufs[i], num }); break;
-            case  67: calcChannel< 67>(ch, { bufs[i], num }); break;
-            case  68: calcChannel< 68>(ch, { bufs[i], num }); break;
-            case  69: calcChannel< 69>(ch, { bufs[i], num }); break;
-            case  70: calcChannel< 70>(ch, { bufs[i], num }); break;
-            case  71: calcChannel< 71>(ch, { bufs[i], num }); break;
-            case  72: calcChannel< 72>(ch, { bufs[i], num }); break;
-            case  73: calcChannel< 73>(ch, { bufs[i], num }); break;
-            case  74: calcChannel< 74>(ch, { bufs[i], num }); break;
-            case  75: calcChannel< 75>(ch, { bufs[i], num }); break;
-            case  76: calcChannel< 76>(ch, { bufs[i], num }); break;
-            case  77: calcChannel< 77>(ch, { bufs[i], num }); break;
-            case  78: calcChannel< 78>(ch, { bufs[i], num }); break;
-            case  79: calcChannel< 79>(ch, { bufs[i], num }); break;
-            case  80: calcChannel< 80>(ch, { bufs[i], num }); break;
-            case  81: calcChannel< 81>(ch, { bufs[i], num }); break;
-            case  82: calcChannel< 82>(ch, { bufs[i], num }); break;
-            case  83: calcChannel< 83>(ch, { bufs[i], num }); break;
-            case  84: calcChannel< 84>(ch, { bufs[i], num }); break;
-            case  85: calcChannel< 85>(ch, { bufs[i], num }); break;
-            case  86: calcChannel< 86>(ch, { bufs[i], num }); break;
-            case  87: calcChannel< 87>(ch, { bufs[i], num }); break;
-            case  88: calcChannel< 88>(ch, { bufs[i], num }); break;
-            case  89: calcChannel< 89>(ch, { bufs[i], num }); break;
-            case  90: calcChannel< 90>(ch, { bufs[i], num }); break;
-            case  91: calcChannel< 91>(ch, { bufs[i], num }); break;
-            case  92: calcChannel< 92>(ch, { bufs[i], num }); break;
-            case  93: calcChannel< 93>(ch, { bufs[i], num }); break;
-            case  94: calcChannel< 94>(ch, { bufs[i], num }); break;
-            case  95: calcChannel< 95>(ch, { bufs[i], num }); break;
-            case  96: calcChannel< 96>(ch, { bufs[i], num }); break;
-            case  97: calcChannel< 97>(ch, { bufs[i], num }); break;
-            case  98: calcChannel< 98>(ch, { bufs[i], num }); break;
-            case  99: calcChannel< 99>(ch, { bufs[i], num }); break;
-            case 100: calcChannel<100>(ch, { bufs[i], num }); break;
-            case 101: calcChannel<101>(ch, { bufs[i], num }); break;
-            case 102: calcChannel<102>(ch, { bufs[i], num }); break;
-            case 103: calcChannel<103>(ch, { bufs[i], num }); break;
-            case 104: calcChannel<104>(ch, { bufs[i], num }); break;
-            case 105: calcChannel<105>(ch, { bufs[i], num }); break;
-            case 106: calcChannel<106>(ch, { bufs[i], num }); break;
-            case 107: calcChannel<107>(ch, { bufs[i], num }); break;
-            case 108: calcChannel<108>(ch, { bufs[i], num }); break;
-            case 109: calcChannel<109>(ch, { bufs[i], num }); break;
-            case 110: calcChannel<110>(ch, { bufs[i], num }); break;
-            case 111: calcChannel<111>(ch, { bufs[i], num }); break;
-            case 112: calcChannel<112>(ch, { bufs[i], num }); break;
-            case 113: calcChannel<113>(ch, { bufs[i], num }); break;
-            case 114: calcChannel<114>(ch, { bufs[i], num }); break;
-            case 115: calcChannel<115>(ch, { bufs[i], num }); break;
-            case 116: calcChannel<116>(ch, { bufs[i], num }); break;
-            case 117: calcChannel<117>(ch, { bufs[i], num }); break;
-            case 118: calcChannel<118>(ch, { bufs[i], num }); break;
-            case 119: calcChannel<119>(ch, { bufs[i], num }); break;
-            case 120: calcChannel<120>(ch, { bufs[i], num }); break;
-            case 121: calcChannel<121>(ch, { bufs[i], num }); break;
-            case 122: calcChannel<122>(ch, { bufs[i], num }); break;
-            case 123: calcChannel<123>(ch, { bufs[i], num }); break;
-            case 124: calcChannel<124>(ch, { bufs[i], num }); break;
-            case 125: calcChannel<125>(ch, { bufs[i], num }); break;
-            case 126: calcChannel<126>(ch, { bufs[i], num }); break;
-            case 127: calcChannel<127>(ch, { bufs[i], num }); break;
-            default: UNREACHABLE;
-            }
+            calcChannel(ch, flags, { bufs[i], num });
         }
         else {
             bufs[i] = nullptr;
@@ -788,9 +654,9 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
     }
 }
 
-uint8_t YM2413::peekReg(uint8_t r) const
+uint8_t YM2413::peekReg(uint8_t /*r*/) const
 {
-    return reg[r];
+    return 0xff; //reg[r]; The original YM2413 does not allow reading back registers
 }
 
 } // namespace YM2413Tim
