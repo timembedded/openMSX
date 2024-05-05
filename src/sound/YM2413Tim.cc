@@ -20,1048 +20,881 @@
 #include <iostream>
 
 namespace openmsx {
-    namespace YM2413Tim {
-        //
-        // YM2413
-        //
+namespace YM2413Tim {
 
-        static constexpr std::array inst_data = {
-            std::array<uint8_t, 8>{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }, // user instrument
-            std::array<uint8_t, 8>{ 0x61,0x61,0x1e,0x17,0xf0,0x7f,0x00,0x17 }, // violin
-            std::array<uint8_t, 8>{ 0x13,0x41,0x16,0x0e,0xfd,0xf4,0x23,0x23 }, // guitar
-            std::array<uint8_t, 8>{ 0x03,0x01,0x9a,0x04,0xf3,0xf3,0x13,0xf3 }, // piano
-            std::array<uint8_t, 8>{ 0x11,0x61,0x0e,0x07,0xfa,0x64,0x70,0x17 }, // flute
-            std::array<uint8_t, 8>{ 0x22,0x21,0x1e,0x06,0xf0,0x76,0x00,0x28 }, // clarinet
-            std::array<uint8_t, 8>{ 0x21,0x22,0x16,0x05,0xf0,0x71,0x00,0x18 }, // oboe
-            std::array<uint8_t, 8>{ 0x21,0x61,0x1d,0x07,0x82,0x80,0x17,0x17 }, // trumpet
-            std::array<uint8_t, 8>{ 0x23,0x21,0x2d,0x16,0x90,0x90,0x00,0x07 }, // organ
-            std::array<uint8_t, 8>{ 0x21,0x21,0x1b,0x06,0x64,0x65,0x10,0x17 }, // horn
-            std::array<uint8_t, 8>{ 0x21,0x21,0x0b,0x1a,0x85,0xa0,0x70,0x07 }, // synthesizer
-            std::array<uint8_t, 8>{ 0x23,0x01,0x83,0x10,0xff,0xb4,0x10,0xf4 }, // harpsichord
-            std::array<uint8_t, 8>{ 0x97,0xc1,0x20,0x07,0xff,0xf4,0x22,0x22 }, // vibraphone
-            std::array<uint8_t, 8>{ 0x61,0x00,0x0c,0x05,0xc2,0xf6,0x40,0x44 }, // synthesizer bass
-            std::array<uint8_t, 8>{ 0x01,0x01,0x56,0x03,0x94,0xc2,0x03,0x12 }, // acoustic bass
-            std::array<uint8_t, 8>{ 0x21,0x01,0x89,0x03,0xf1,0xe4,0xf0,0x23 }, // electric guitar
-            std::array<uint8_t, 8>{ 0x07,0x21,0x14,0x00,0xee,0xf8,0xff,0xf8 },
-            std::array<uint8_t, 8>{ 0x01,0x31,0x00,0x00,0xf8,0xf7,0xf8,0xf7 },
-            std::array<uint8_t, 8>{ 0x25,0x11,0x00,0x00,0xf8,0xfa,0xf8,0x55 }
-        };
+//
+// YM2413
+//
 
-        YM2413::YM2413()
-        {
-            ranges::fill(reg, 0); // avoid UMR
+static constexpr std::array inst_data = {
+    std::array<uint8_t, 8>{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }, // user instrument
+    std::array<uint8_t, 8>{ 0x61,0x61,0x1e,0x17,0xf0,0x7f,0x00,0x17 }, // violin
+    std::array<uint8_t, 8>{ 0x13,0x41,0x16,0x0e,0xfd,0xf4,0x23,0x23 }, // guitar
+    std::array<uint8_t, 8>{ 0x03,0x01,0x9a,0x04,0xf3,0xf3,0x13,0xf3 }, // piano
+    std::array<uint8_t, 8>{ 0x11,0x61,0x0e,0x07,0xfa,0x64,0x70,0x17 }, // flute
+    std::array<uint8_t, 8>{ 0x22,0x21,0x1e,0x06,0xf0,0x76,0x00,0x28 }, // clarinet
+    std::array<uint8_t, 8>{ 0x21,0x22,0x16,0x05,0xf0,0x71,0x00,0x18 }, // oboe
+    std::array<uint8_t, 8>{ 0x21,0x61,0x1d,0x07,0x82,0x80,0x17,0x17 }, // trumpet
+    std::array<uint8_t, 8>{ 0x23,0x21,0x2d,0x16,0x90,0x90,0x00,0x07 }, // organ
+    std::array<uint8_t, 8>{ 0x21,0x21,0x1b,0x06,0x64,0x65,0x10,0x17 }, // horn
+    std::array<uint8_t, 8>{ 0x21,0x21,0x0b,0x1a,0x85,0xa0,0x70,0x07 }, // synthesizer
+    std::array<uint8_t, 8>{ 0x23,0x01,0x83,0x10,0xff,0xb4,0x10,0xf4 }, // harpsichord
+    std::array<uint8_t, 8>{ 0x97,0xc1,0x20,0x07,0xff,0xf4,0x22,0x22 }, // vibraphone
+    std::array<uint8_t, 8>{ 0x61,0x00,0x0c,0x05,0xc2,0xf6,0x40,0x44 }, // synthesizer bass
+    std::array<uint8_t, 8>{ 0x01,0x01,0x56,0x03,0x94,0xc2,0x03,0x12 }, // acoustic bass
+    std::array<uint8_t, 8>{ 0x21,0x01,0x89,0x03,0xf1,0xe4,0xf0,0x23 }, // electric guitar
+    std::array<uint8_t, 8>{ 0x07,0x21,0x14,0x00,0xee,0xf8,0xff,0xf8 },
+    std::array<uint8_t, 8>{ 0x01,0x31,0x00,0x00,0xf8,0xf7,0xf8,0xf7 },
+    std::array<uint8_t, 8>{ 0x25,0x11,0x00,0x00,0xf8,0xfa,0xf8,0x55 }
+};
 
-            for (auto i : xrange(16 + 3)) {
-                patches[i][0].initModulator(inst_data[i]);
-                patches[i][1].initCarrier(inst_data[i]);
+YM2413::YM2413()
+{
+    ranges::fill(reg, 0); // avoid UMR
+
+    for (auto i : xrange(16 + 3)) {
+        patches[i][0].initModulator(inst_data[i]);
+        patches[i][1].initCarrier(inst_data[i]);
+    }
+
+    reset();
+}
+
+// Reset whole of OPLL except patch data
+void YM2413::reset()
+{
+    pm_phase = 0;
+    am_phase = 0;
+    noise_seed = 0xFFFF;
+
+    for (auto& ch : channels) {
+        ch.reset();
+        ch.setPatch(getPatch(0, false), getPatch(0, true));
+    }
+    for (auto i : xrange(uint8_t(0x40))) {
+        writeReg(i, 0);
+    }
+    registerLatch = 0;
+}
+
+// Drum key on
+void YM2413::keyOn_BD()
+{
+    Channel& ch6 = channels[6];
+    if (!ch6.car.slot_on_flag) {
+        ch6.car.setEnvelopeState(SETTLE);
+        // this will shortly set both car and mod to ATTACK state
+    }
+    ch6.car.slot_on_flag |= 2;
+    ch6.mod.slot_on_flag |= 2;
+}
+void YM2413::keyOn_HH()
+{
+    // TODO do these also use the SETTLE stuff?
+    Channel& ch7 = channels[7];
+    if (!ch7.mod.slot_on_flag) {
+        ch7.mod.slotOn2();
+    }
+    ch7.mod.slot_on_flag |= 2;
+}
+void YM2413::keyOn_SD()
+{
+    Channel& ch7 = channels[7];
+    if (!ch7.car.slot_on_flag) {
+        ch7.car.slotOn();
+    }
+    ch7.car.slot_on_flag |= 2;
+}
+void YM2413::keyOn_TOM()
+{
+    Channel& ch8 = channels[8];
+    if (!ch8.mod.slot_on_flag) {
+        ch8.mod.slotOn();
+    }
+    ch8.mod.slot_on_flag |= 2;
+}
+void YM2413::keyOn_CYM()
+{
+    Channel& ch8 = channels[8];
+    if (!ch8.car.slot_on_flag) {
+        ch8.car.slotOn2();
+    }
+    ch8.car.slot_on_flag |= 2;
+}
+
+// Drum key off
+void YM2413::keyOff_BD()
+{
+    Channel& ch6 = channels[6];
+    if (ch6.car.slot_on_flag) {
+        ch6.car.slot_on_flag &= ~2;
+        ch6.mod.slot_on_flag &= ~2;
+        if (!ch6.car.slot_on_flag) {
+            ch6.car.slotOff();
+        }
+    }
+}
+void YM2413::keyOff_HH()
+{
+    Channel& ch7 = channels[7];
+    if (ch7.mod.slot_on_flag) {
+        ch7.mod.slot_on_flag &= ~2;
+        if (!ch7.mod.slot_on_flag) {
+            ch7.mod.slotOff();
+        }
+    }
+}
+void YM2413::keyOff_SD()
+{
+    Channel& ch7 = channels[7];
+    if (ch7.car.slot_on_flag) {
+        ch7.car.slot_on_flag &= ~2;
+        if (!ch7.car.slot_on_flag) {
+            ch7.car.slotOff();
+        }
+    }
+}
+void YM2413::keyOff_TOM()
+{
+    Channel& ch8 = channels[8];
+    if (ch8.mod.slot_on_flag) {
+        ch8.mod.slot_on_flag &= ~2;
+        if (!ch8.mod.slot_on_flag) {
+            ch8.mod.slotOff();
+        }
+    }
+}
+void YM2413::keyOff_CYM()
+{
+    Channel& ch8 = channels[8];
+    if (ch8.car.slot_on_flag) {
+        ch8.car.slot_on_flag &= ~2;
+        if (!ch8.car.slot_on_flag) {
+            ch8.car.slotOff();
+        }
+    }
+}
+
+void YM2413::setRhythmFlags(uint8_t old)
+{
+    Channel& ch6 = channels[6];
+    Channel& ch7 = channels[7];
+    Channel& ch8 = channels[8];
+
+    // flags = X | X | mode | BD | SD | TOM | TC | HH
+    uint8_t flags = reg[0x0E];
+    if ((flags ^ old) & 0x20) {
+        if (flags & 0x20) {
+            // OFF -> ON
+            ch6.setPatch(getPatch(16, false), getPatch(16, true));
+            ch7.setPatch(getPatch(17, false), getPatch(17, true));
+            ch7.mod.setVolume(reg[0x37] >> 4);
+            ch8.setPatch(getPatch(18, false), getPatch(18, true));
+            ch8.mod.setVolume(reg[0x38] >> 4);
+        }
+        else {
+            // ON -> OFF
+            ch6.setPatch(getPatch(reg[0x36] >> 4, false), getPatch(reg[0x36] >> 4, true));
+            keyOff_BD();
+            ch7.setPatch(getPatch(reg[0x37] >> 4, false), getPatch(reg[0x37] >> 4, true));
+            keyOff_SD();
+            keyOff_HH();
+            ch8.setPatch(getPatch(reg[0x38] >> 4, false), getPatch(reg[0x38] >> 4, true));
+            keyOff_TOM();
+            keyOff_CYM();
+        }
+    }
+    if (flags & 0x20) {
+        if (flags & 0x10) keyOn_BD();  else keyOff_BD();
+        if (flags & 0x08) keyOn_SD();  else keyOff_SD();
+        if (flags & 0x04) keyOn_TOM(); else keyOff_TOM();
+        if (flags & 0x02) keyOn_CYM(); else keyOff_CYM();
+        if (flags & 0x01) keyOn_HH();  else keyOff_HH();
+    }
+
+    uint16_t freq6 = getFreq(6);
+    ch6.mod.updateAll(freq6, false);
+    ch6.car.updateAll(freq6, true);
+    uint16_t freq7 = getFreq(7);
+    ch7.mod.updateAll(freq7, isRhythm());
+    ch7.car.updateAll(freq7, true);
+    uint16_t freq8 = getFreq(8);
+    ch8.mod.updateAll(freq8, isRhythm());
+    ch8.car.updateAll(freq8, true);
+}
+
+void YM2413::update_key_status()
+{
+    for (auto [i, ch] : enumerate(channels)) {
+        uint8_t slot_on = (reg[0x20 + i] & 0x10) ? 1 : 0;
+        ch.mod.slot_on_flag = slot_on;
+        ch.car.slot_on_flag = slot_on;
+    }
+    if (isRhythm()) {
+        Channel& ch6 = channels[6];
+        ch6.mod.slot_on_flag |= uint8_t((reg[0x0e] & 0x10) ? 2 : 0); // BD1
+        ch6.car.slot_on_flag |= uint8_t((reg[0x0e] & 0x10) ? 2 : 0); // BD2
+        Channel& ch7 = channels[7];
+        ch7.mod.slot_on_flag |= uint8_t((reg[0x0e] & 0x01) ? 2 : 0); // HH
+        ch7.car.slot_on_flag |= uint8_t((reg[0x0e] & 0x08) ? 2 : 0); // SD
+        Channel& ch8 = channels[8];
+        ch8.mod.slot_on_flag |= uint8_t((reg[0x0e] & 0x04) ? 2 : 0); // TOM
+        ch8.car.slot_on_flag |= uint8_t((reg[0x0e] & 0x02) ? 2 : 0); // CYM
+    }
+}
+
+float YM2413::getAmplificationFactor() const
+{
+    return 1.0f / (1 << DB2LIN_AMP_BITS);
+}
+
+bool YM2413::isRhythm() const
+{
+    return (reg[0x0E] & 0x20) != 0;
+}
+
+uint16_t YM2413::getFreq(unsigned channel) const
+{
+    // combined fnum (=9bit) and block (=3bit)
+    assert(channel < 9);
+    return reg[0x10 + channel] | ((reg[0x20 + channel] & 0x0F) << 8);
+}
+
+Patch& YM2413::getPatch(unsigned instrument, bool carrier)
+{
+    return patches[instrument][carrier];
+}
+
+template<unsigned FLAGS>
+void YM2413::calcChannel(Channel& ch, std::span<float> buf)
+{
+    // VC++ requires explicit conversion to bool. Compiler bug??
+    const bool HAS_CAR_PM = (FLAGS & 1) != 0;
+    const bool HAS_CAR_AM = (FLAGS & 2) != 0;
+    const bool HAS_MOD_PM = (FLAGS & 4) != 0;
+    const bool HAS_MOD_AM = (FLAGS & 8) != 0;
+    const bool HAS_MOD_FB = (FLAGS & 16) != 0;
+    const bool HAS_CAR_FIXED_ENV = (FLAGS & 32) != 0;
+    const bool HAS_MOD_FIXED_ENV = (FLAGS & 64) != 0;
+
+    assert(((ch.car.patch.AMPM & 1) != 0) == HAS_CAR_PM);
+    assert(((ch.car.patch.AMPM & 2) != 0) == HAS_CAR_AM);
+    assert(((ch.mod.patch.AMPM & 1) != 0) == HAS_MOD_PM);
+    assert(((ch.mod.patch.AMPM & 2) != 0) == HAS_MOD_AM);
+
+    unsigned tmp_pm_phase = pm_phase;
+    unsigned tmp_am_phase = am_phase;
+    unsigned car_fixed_env = 0; // dummy
+    unsigned mod_fixed_env = 0; // dummy
+    if constexpr (HAS_CAR_FIXED_ENV) {
+        car_fixed_env = ch.car.calc_fixed_env(HAS_CAR_AM);
+    }
+    if constexpr (HAS_MOD_FIXED_ENV) {
+        mod_fixed_env = ch.mod.calc_fixed_env(HAS_MOD_AM);
+    }
+
+    for (auto& b : buf) {
+        unsigned lfo_pm = 0;
+        if constexpr (HAS_CAR_PM || HAS_MOD_PM) {
+            // Copied from Burczynski:
+            //  There are only 8 different steps for PM, and each
+            //  step lasts for 1024 samples. This results in a PM
+            //  freq of 6.1Hz (but datasheet says it's 6.4Hz).
+            ++tmp_pm_phase;
+            lfo_pm = (tmp_pm_phase >> 10) & 7;
+        }
+        int lfo_am = 0; // avoid warning
+        if constexpr (HAS_CAR_AM || HAS_MOD_AM) {
+            ++tmp_am_phase;
+            if (tmp_am_phase == (LFO_AM_TAB_ELEMENTS * 64)) {
+                tmp_am_phase = 0;
             }
-
-            reset();
+            lfo_am = lfo_am_table[tmp_am_phase / 64];
         }
+        int fm = ch.mod.calc_slot_mod(HAS_MOD_AM, HAS_MOD_FB, HAS_MOD_FIXED_ENV,
+            HAS_MOD_PM ? lfo_pm : 0, lfo_am, mod_fixed_env);
+        b += narrow_cast<float>(ch.car.calc_slot_car(HAS_CAR_AM, HAS_CAR_FIXED_ENV,
+            HAS_CAR_PM ? lfo_pm : 0, lfo_am, fm, car_fixed_env));
+    }
+}
 
-        // Reset whole of OPLL except patch data
-        void YM2413::reset()
-        {
-            pm_phase = 0;
-            am_phase = 0;
-            noise_seed = 0xFFFF;
+void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
+{
+    assert(num != 0);
 
-            for (auto& ch : channels) {
-                ch.reset();
-                ch.setPatch(getPatch(0, false), getPatch(0, true));
+    for (auto i : xrange(isRhythm() ? 6 : 9)) {
+        Channel& ch = channels[i];
+        if (ch.car.isActive()) {
+            // Below we choose between 128 specialized versions of
+            // calcChannel(). This allows to move a lot of
+            // conditional code out of the inner-loop.
+            bool carFixedEnv = ch.car.state == one_of(SUSHOLD, FINISH);
+            bool modFixedEnv = ch.mod.state == one_of(SUSHOLD, FINISH);
+            if (ch.car.state == SETTLE) {
+                modFixedEnv = false;
             }
-            for (auto i : xrange(uint8_t(0x40))) {
-                writeReg(i, 0);
-            }
-            registerLatch = 0;
-        }
-
-        // Drum key on
-        void YM2413::keyOn_BD()
-        {
-            Channel& ch6 = channels[6];
-            if (!ch6.car.slot_on_flag) {
-                ch6.car.setEnvelopeState(SETTLE);
-                // this will shortly set both car and mod to ATTACK state
-            }
-            ch6.car.slot_on_flag |= 2;
-            ch6.mod.slot_on_flag |= 2;
-        }
-        void YM2413::keyOn_HH()
-        {
-            // TODO do these also use the SETTLE stuff?
-            Channel& ch7 = channels[7];
-            if (!ch7.mod.slot_on_flag) {
-                ch7.mod.slotOn2();
-            }
-            ch7.mod.slot_on_flag |= 2;
-        }
-        void YM2413::keyOn_SD()
-        {
-            Channel& ch7 = channels[7];
-            if (!ch7.car.slot_on_flag) {
-                ch7.car.slotOn();
-            }
-            ch7.car.slot_on_flag |= 2;
-        }
-        void YM2413::keyOn_TOM()
-        {
-            Channel& ch8 = channels[8];
-            if (!ch8.mod.slot_on_flag) {
-                ch8.mod.slotOn();
-            }
-            ch8.mod.slot_on_flag |= 2;
-        }
-        void YM2413::keyOn_CYM()
-        {
-            Channel& ch8 = channels[8];
-            if (!ch8.car.slot_on_flag) {
-                ch8.car.slotOn2();
-            }
-            ch8.car.slot_on_flag |= 2;
-        }
-
-        // Drum key off
-        void YM2413::keyOff_BD()
-        {
-            Channel& ch6 = channels[6];
-            if (ch6.car.slot_on_flag) {
-                ch6.car.slot_on_flag &= ~2;
-                ch6.mod.slot_on_flag &= ~2;
-                if (!ch6.car.slot_on_flag) {
-                    ch6.car.slotOff();
-                }
-            }
-        }
-        void YM2413::keyOff_HH()
-        {
-            Channel& ch7 = channels[7];
-            if (ch7.mod.slot_on_flag) {
-                ch7.mod.slot_on_flag &= ~2;
-                if (!ch7.mod.slot_on_flag) {
-                    ch7.mod.slotOff();
-                }
-            }
-        }
-        void YM2413::keyOff_SD()
-        {
-            Channel& ch7 = channels[7];
-            if (ch7.car.slot_on_flag) {
-                ch7.car.slot_on_flag &= ~2;
-                if (!ch7.car.slot_on_flag) {
-                    ch7.car.slotOff();
-                }
-            }
-        }
-        void YM2413::keyOff_TOM()
-        {
-            Channel& ch8 = channels[8];
-            if (ch8.mod.slot_on_flag) {
-                ch8.mod.slot_on_flag &= ~2;
-                if (!ch8.mod.slot_on_flag) {
-                    ch8.mod.slotOff();
-                }
-            }
-        }
-        void YM2413::keyOff_CYM()
-        {
-            Channel& ch8 = channels[8];
-            if (ch8.car.slot_on_flag) {
-                ch8.car.slot_on_flag &= ~2;
-                if (!ch8.car.slot_on_flag) {
-                    ch8.car.slotOff();
-                }
-            }
-        }
-
-        void YM2413::setRhythmFlags(uint8_t old)
-        {
-            Channel& ch6 = channels[6];
-            Channel& ch7 = channels[7];
-            Channel& ch8 = channels[8];
-
-            // flags = X | X | mode | BD | SD | TOM | TC | HH
-            uint8_t flags = reg[0x0E];
-            if ((flags ^ old) & 0x20) {
-                if (flags & 0x20) {
-                    // OFF -> ON
-                    ch6.setPatch(getPatch(16, false), getPatch(16, true));
-                    ch7.setPatch(getPatch(17, false), getPatch(17, true));
-                    ch7.mod.setVolume(reg[0x37] >> 4);
-                    ch8.setPatch(getPatch(18, false), getPatch(18, true));
-                    ch8.mod.setVolume(reg[0x38] >> 4);
-                }
-                else {
-                    // ON -> OFF
-                    ch6.setPatch(getPatch(reg[0x36] >> 4, false), getPatch(reg[0x36] >> 4, true));
-                    keyOff_BD();
-                    ch7.setPatch(getPatch(reg[0x37] >> 4, false), getPatch(reg[0x37] >> 4, true));
-                    keyOff_SD();
-                    keyOff_HH();
-                    ch8.setPatch(getPatch(reg[0x38] >> 4, false), getPatch(reg[0x38] >> 4, true));
-                    keyOff_TOM();
-                    keyOff_CYM();
-                }
-            }
-            if (flags & 0x20) {
-                if (flags & 0x10) keyOn_BD();  else keyOff_BD();
-                if (flags & 0x08) keyOn_SD();  else keyOff_SD();
-                if (flags & 0x04) keyOn_TOM(); else keyOff_TOM();
-                if (flags & 0x02) keyOn_CYM(); else keyOff_CYM();
-                if (flags & 0x01) keyOn_HH();  else keyOff_HH();
-            }
-
-            uint16_t freq6 = getFreq(6);
-            ch6.mod.updateAll(freq6, false);
-            ch6.car.updateAll(freq6, true);
-            uint16_t freq7 = getFreq(7);
-            ch7.mod.updateAll(freq7, isRhythm());
-            ch7.car.updateAll(freq7, true);
-            uint16_t freq8 = getFreq(8);
-            ch8.mod.updateAll(freq8, isRhythm());
-            ch8.car.updateAll(freq8, true);
-        }
-
-        void YM2413::update_key_status()
-        {
-            for (auto [i, ch] : enumerate(channels)) {
-                uint8_t slot_on = (reg[0x20 + i] & 0x10) ? 1 : 0;
-                ch.mod.slot_on_flag = slot_on;
-                ch.car.slot_on_flag = slot_on;
-            }
-            if (isRhythm()) {
-                Channel& ch6 = channels[6];
-                ch6.mod.slot_on_flag |= uint8_t((reg[0x0e] & 0x10) ? 2 : 0); // BD1
-                ch6.car.slot_on_flag |= uint8_t((reg[0x0e] & 0x10) ? 2 : 0); // BD2
-                Channel& ch7 = channels[7];
-                ch7.mod.slot_on_flag |= uint8_t((reg[0x0e] & 0x01) ? 2 : 0); // HH
-                ch7.car.slot_on_flag |= uint8_t((reg[0x0e] & 0x08) ? 2 : 0); // SD
-                Channel& ch8 = channels[8];
-                ch8.mod.slot_on_flag |= uint8_t((reg[0x0e] & 0x04) ? 2 : 0); // TOM
-                ch8.car.slot_on_flag |= uint8_t((reg[0x0e] & 0x02) ? 2 : 0); // CYM
-            }
-        }
-
-        // Convert Amp(0 to EG_HEIGHT) to Phase(0 to 8PI)
-        static constexpr int wave2_8pi(int e)
-        {
-            int shift = SLOT_AMP_BITS - PG_BITS - 2;
-            if (shift > 0) {
-                return e >> shift;
-            }
-            else {
-                return e << -shift;
-            }
-        }
-
-        // PG
-        ALWAYS_INLINE unsigned Slot::calc_phase(unsigned lfo_pm)
-        {
-            cPhase += dPhase[lfo_pm];
-            return cPhase >> DP_BASE_BITS;
-        }
-
-        // EG
-        void Slot::calc_envelope_outline(unsigned& out)
-        {
-            switch (state) {
-            case ATTACK:
-                out = 0;
-                eg_phase = 0;
-                setEnvelopeState(DECAY);
-                break;
-            case DECAY:
-                eg_phase = eg_phase_max;
-                setEnvelopeState(patch.EG ? SUSHOLD : SUSTAIN);
-                break;
-            case SUSTAIN:
-            case RELEASE:
-                setEnvelopeState(FINISH);
-                break;
-            case SETTLE:
-                // Comment copied from Burczynski code (didn't verify myself):
-                //   When CARRIER envelope gets down to zero level, phases in
-                //   BOTH operators are reset (at the same time?).
-                slotOn();
-                sibling->slotOn();
-                break;
-            case SUSHOLD:
-            case FINISH:
-            default:
-                UNREACHABLE;
-            }
-        }
-
-        template<bool HAS_AM, bool FIXED_ENV>
-        ALWAYS_INLINE unsigned Slot::calc_envelope(int lfo_am, unsigned fixed_env)
-        {
-            assert(!FIXED_ENV || (state == one_of(SUSHOLD, FINISH)));
-
-            if constexpr (FIXED_ENV) {
-                unsigned out = fixed_env;
-                if constexpr (HAS_AM) {
-                    out += lfo_am; // [0, 768)
-                    out |= 3;
-                }
-                else {
-                    // out |= 3   is already done in calc_fixed_env()
-                }
-                return out;
-            }
-            else {
-                unsigned out = eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128]
-                if (state == ATTACK) {
-                    out = arAdjustTab[out]; // [0, 128]
-                }
-                eg_phase += eg_dPhase;
-                if (eg_phase >= eg_phase_max) {
-                    calc_envelope_outline(out);
-                }
-                out = EG2DB(out + tll); // [0, 732]
-                if constexpr (HAS_AM) {
-                    out += lfo_am; // [0, 758]
-                }
-                return out | 3;
-            }
-        }
-
-        template<bool HAS_AM> unsigned Slot::calc_fixed_env() const
-        {
-            assert(state == one_of(SUSHOLD, FINISH));
-            assert(eg_dPhase == 0);
-            unsigned out = eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128)
-            out = EG2DB(out + tll); // [0, 480)
-            if constexpr (!HAS_AM) {
-                out |= 3;
-            }
-            return out;
-        }
-
-        // CARRIER
-        template<bool HAS_AM, bool FIXED_ENV>
-        ALWAYS_INLINE int Slot::calc_slot_car(unsigned lfo_pm, int lfo_am, int fm, unsigned fixed_env)
-        {
-            int phase = narrow<int>(calc_phase(lfo_pm)) + wave2_8pi(fm);
-            unsigned egOut = calc_envelope<HAS_AM, FIXED_ENV>(lfo_am, fixed_env);
-            int newOutput = dB2LinTab[patch.WF[phase & PG_MASK] + egOut];
-            output = (output + newOutput) >> 1;
-            return output;
-        }
-
-        // MODULATOR
-        template<bool HAS_AM, bool HAS_FB, bool FIXED_ENV>
-        ALWAYS_INLINE int Slot::calc_slot_mod(unsigned lfo_pm, int lfo_am, unsigned fixed_env)
-        {
-            assert((patch.FB != 0) == HAS_FB);
-            unsigned phase = calc_phase(lfo_pm);
-            unsigned egOut = calc_envelope<HAS_AM, FIXED_ENV>(lfo_am, fixed_env);
-            if constexpr (HAS_FB) {
-                phase += wave2_8pi(feedback) >> patch.FB;
-            }
-            int newOutput = dB2LinTab[patch.WF[phase & PG_MASK] + egOut];
-            feedback = (output + newOutput) >> 1;
-            output = newOutput;
-            return feedback;
-        }
-
-        // TOM (ch8 mod)
-        ALWAYS_INLINE int Slot::calc_slot_tom()
-        {
-            unsigned phase = calc_phase(0);
-            unsigned egOut = calc_envelope<false, false>(0, 0);
-            return dB2LinTab[patch.WF[phase & PG_MASK] + egOut];
-        }
-
-        // SNARE (ch7 car)
-        ALWAYS_INLINE int Slot::calc_slot_snare(bool noise)
-        {
-            unsigned phase = calc_phase(0);
-            unsigned egOut = calc_envelope<false, false>(0, 0);
-            return BIT(phase, 7)
-                ? dB2LinTab[(noise ? DB_POS(0.0) : DB_POS(15.0)) + egOut]
-                : dB2LinTab[(noise ? DB_NEG(0.0) : DB_NEG(15.0)) + egOut];
-        }
-
-        // TOP-CYM (ch8 car)
-        ALWAYS_INLINE int Slot::calc_slot_cym(unsigned phase7, unsigned phase8)
-        {
-            unsigned egOut = calc_envelope<false, false>(0, 0);
-            unsigned dbOut = (((BIT(phase7, PG_BITS - 8) ^
-                BIT(phase7, PG_BITS - 1)) |
-                BIT(phase7, PG_BITS - 7)) ^
-                (BIT(phase8, PG_BITS - 7) &
-                    !BIT(phase8, PG_BITS - 5)))
-                ? DB_NEG(3.0)
-                : DB_POS(3.0);
-            return dB2LinTab[dbOut + egOut];
-        }
-
-        // HI-HAT (ch7 mod)
-        ALWAYS_INLINE int Slot::calc_slot_hat(unsigned phase7, unsigned phase8, bool noise)
-        {
-            unsigned egOut = calc_envelope<false, false>(0, 0);
-            unsigned dbOut = (((BIT(phase7, PG_BITS - 8) ^
-                BIT(phase7, PG_BITS - 1)) |
-                BIT(phase7, PG_BITS - 7)) ^
-                (BIT(phase8, PG_BITS - 7) &
-                    !BIT(phase8, PG_BITS - 5)))
-                ? (noise ? DB_NEG(12.0) : DB_NEG(24.0))
-                : (noise ? DB_POS(12.0) : DB_POS(24.0));
-            return dB2LinTab[dbOut + egOut];
-        }
-
-        float YM2413::getAmplificationFactor() const
-        {
-            return 1.0f / (1 << DB2LIN_AMP_BITS);
-        }
-
-        bool YM2413::isRhythm() const
-        {
-            return (reg[0x0E] & 0x20) != 0;
-        }
-
-        uint16_t YM2413::getFreq(unsigned channel) const
-        {
-            // combined fnum (=9bit) and block (=3bit)
-            assert(channel < 9);
-            return reg[0x10 + channel] | ((reg[0x20 + channel] & 0x0F) << 8);
-        }
-
-        Patch& YM2413::getPatch(unsigned instrument, bool carrier)
-        {
-            return patches[instrument][carrier];
-        }
-
-        template<unsigned FLAGS>
-        ALWAYS_INLINE void YM2413::calcChannel(Channel& ch, std::span<float> buf)
-        {
-            // VC++ requires explicit conversion to bool. Compiler bug??
-            const bool HAS_CAR_PM = (FLAGS & 1) != 0;
-            const bool HAS_CAR_AM = (FLAGS & 2) != 0;
-            const bool HAS_MOD_PM = (FLAGS & 4) != 0;
-            const bool HAS_MOD_AM = (FLAGS & 8) != 0;
-            const bool HAS_MOD_FB = (FLAGS & 16) != 0;
-            const bool HAS_CAR_FIXED_ENV = (FLAGS & 32) != 0;
-            const bool HAS_MOD_FIXED_ENV = (FLAGS & 64) != 0;
-
-            assert(((ch.car.patch.AMPM & 1) != 0) == HAS_CAR_PM);
-            assert(((ch.car.patch.AMPM & 2) != 0) == HAS_CAR_AM);
-            assert(((ch.mod.patch.AMPM & 1) != 0) == HAS_MOD_PM);
-            assert(((ch.mod.patch.AMPM & 2) != 0) == HAS_MOD_AM);
-
-            unsigned tmp_pm_phase = pm_phase;
-            unsigned tmp_am_phase = am_phase;
-            unsigned car_fixed_env = 0; // dummy
-            unsigned mod_fixed_env = 0; // dummy
-            if constexpr (HAS_CAR_FIXED_ENV) {
-                car_fixed_env = ch.car.calc_fixed_env<HAS_CAR_AM>();
-            }
-            if constexpr (HAS_MOD_FIXED_ENV) {
-                mod_fixed_env = ch.mod.calc_fixed_env<HAS_MOD_AM>();
-            }
-
-            for (auto& b : buf) {
-                unsigned lfo_pm = 0;
-                if constexpr (HAS_CAR_PM || HAS_MOD_PM) {
-                    // Copied from Burczynski:
-                    //  There are only 8 different steps for PM, and each
-                    //  step lasts for 1024 samples. This results in a PM
-                    //  freq of 6.1Hz (but datasheet says it's 6.4Hz).
-                    ++tmp_pm_phase;
-                    lfo_pm = (tmp_pm_phase >> 10) & 7;
-                }
-                int lfo_am = 0; // avoid warning
-                if constexpr (HAS_CAR_AM || HAS_MOD_AM) {
-                    ++tmp_am_phase;
-                    if (tmp_am_phase == (LFO_AM_TAB_ELEMENTS * 64)) {
-                        tmp_am_phase = 0;
-                    }
-                    lfo_am = lfo_am_table[tmp_am_phase / 64];
-                }
-                int fm = ch.mod.calc_slot_mod<HAS_MOD_AM, HAS_MOD_FB, HAS_MOD_FIXED_ENV>(
-                    HAS_MOD_PM ? lfo_pm : 0, lfo_am, mod_fixed_env);
-                b += narrow_cast<float>(ch.car.calc_slot_car<HAS_CAR_AM, HAS_CAR_FIXED_ENV>(
-                    HAS_CAR_PM ? lfo_pm : 0, lfo_am, fm, car_fixed_env));
+            unsigned flags = (ch.car.patch.AMPM << 0) |
+                (ch.mod.patch.AMPM << 2) |
+                ((ch.mod.patch.FB != 0) << 4) |
+                (carFixedEnv << 5) |
+                (modFixedEnv << 6);
+            switch (flags) {
+            case   0: calcChannel<  0>(ch, { bufs[i], num }); break;
+            case   1: calcChannel<  1>(ch, { bufs[i], num }); break;
+            case   2: calcChannel<  2>(ch, { bufs[i], num }); break;
+            case   3: calcChannel<  3>(ch, { bufs[i], num }); break;
+            case   4: calcChannel<  4>(ch, { bufs[i], num }); break;
+            case   5: calcChannel<  5>(ch, { bufs[i], num }); break;
+            case   6: calcChannel<  6>(ch, { bufs[i], num }); break;
+            case   7: calcChannel<  7>(ch, { bufs[i], num }); break;
+            case   8: calcChannel<  8>(ch, { bufs[i], num }); break;
+            case   9: calcChannel<  9>(ch, { bufs[i], num }); break;
+            case  10: calcChannel< 10>(ch, { bufs[i], num }); break;
+            case  11: calcChannel< 11>(ch, { bufs[i], num }); break;
+            case  12: calcChannel< 12>(ch, { bufs[i], num }); break;
+            case  13: calcChannel< 13>(ch, { bufs[i], num }); break;
+            case  14: calcChannel< 14>(ch, { bufs[i], num }); break;
+            case  15: calcChannel< 15>(ch, { bufs[i], num }); break;
+            case  16: calcChannel< 16>(ch, { bufs[i], num }); break;
+            case  17: calcChannel< 17>(ch, { bufs[i], num }); break;
+            case  18: calcChannel< 18>(ch, { bufs[i], num }); break;
+            case  19: calcChannel< 19>(ch, { bufs[i], num }); break;
+            case  20: calcChannel< 20>(ch, { bufs[i], num }); break;
+            case  21: calcChannel< 21>(ch, { bufs[i], num }); break;
+            case  22: calcChannel< 22>(ch, { bufs[i], num }); break;
+            case  23: calcChannel< 23>(ch, { bufs[i], num }); break;
+            case  24: calcChannel< 24>(ch, { bufs[i], num }); break;
+            case  25: calcChannel< 25>(ch, { bufs[i], num }); break;
+            case  26: calcChannel< 26>(ch, { bufs[i], num }); break;
+            case  27: calcChannel< 27>(ch, { bufs[i], num }); break;
+            case  28: calcChannel< 28>(ch, { bufs[i], num }); break;
+            case  29: calcChannel< 29>(ch, { bufs[i], num }); break;
+            case  30: calcChannel< 30>(ch, { bufs[i], num }); break;
+            case  31: calcChannel< 31>(ch, { bufs[i], num }); break;
+            case  32: calcChannel< 32>(ch, { bufs[i], num }); break;
+            case  33: calcChannel< 33>(ch, { bufs[i], num }); break;
+            case  34: calcChannel< 34>(ch, { bufs[i], num }); break;
+            case  35: calcChannel< 35>(ch, { bufs[i], num }); break;
+            case  36: calcChannel< 36>(ch, { bufs[i], num }); break;
+            case  37: calcChannel< 37>(ch, { bufs[i], num }); break;
+            case  38: calcChannel< 38>(ch, { bufs[i], num }); break;
+            case  39: calcChannel< 39>(ch, { bufs[i], num }); break;
+            case  40: calcChannel< 40>(ch, { bufs[i], num }); break;
+            case  41: calcChannel< 41>(ch, { bufs[i], num }); break;
+            case  42: calcChannel< 42>(ch, { bufs[i], num }); break;
+            case  43: calcChannel< 43>(ch, { bufs[i], num }); break;
+            case  44: calcChannel< 44>(ch, { bufs[i], num }); break;
+            case  45: calcChannel< 45>(ch, { bufs[i], num }); break;
+            case  46: calcChannel< 46>(ch, { bufs[i], num }); break;
+            case  47: calcChannel< 47>(ch, { bufs[i], num }); break;
+            case  48: calcChannel< 48>(ch, { bufs[i], num }); break;
+            case  49: calcChannel< 49>(ch, { bufs[i], num }); break;
+            case  50: calcChannel< 50>(ch, { bufs[i], num }); break;
+            case  51: calcChannel< 51>(ch, { bufs[i], num }); break;
+            case  52: calcChannel< 52>(ch, { bufs[i], num }); break;
+            case  53: calcChannel< 53>(ch, { bufs[i], num }); break;
+            case  54: calcChannel< 54>(ch, { bufs[i], num }); break;
+            case  55: calcChannel< 55>(ch, { bufs[i], num }); break;
+            case  56: calcChannel< 56>(ch, { bufs[i], num }); break;
+            case  57: calcChannel< 57>(ch, { bufs[i], num }); break;
+            case  58: calcChannel< 58>(ch, { bufs[i], num }); break;
+            case  59: calcChannel< 59>(ch, { bufs[i], num }); break;
+            case  60: calcChannel< 60>(ch, { bufs[i], num }); break;
+            case  61: calcChannel< 61>(ch, { bufs[i], num }); break;
+            case  62: calcChannel< 62>(ch, { bufs[i], num }); break;
+            case  63: calcChannel< 63>(ch, { bufs[i], num }); break;
+            case  64: calcChannel< 64>(ch, { bufs[i], num }); break;
+            case  65: calcChannel< 65>(ch, { bufs[i], num }); break;
+            case  66: calcChannel< 66>(ch, { bufs[i], num }); break;
+            case  67: calcChannel< 67>(ch, { bufs[i], num }); break;
+            case  68: calcChannel< 68>(ch, { bufs[i], num }); break;
+            case  69: calcChannel< 69>(ch, { bufs[i], num }); break;
+            case  70: calcChannel< 70>(ch, { bufs[i], num }); break;
+            case  71: calcChannel< 71>(ch, { bufs[i], num }); break;
+            case  72: calcChannel< 72>(ch, { bufs[i], num }); break;
+            case  73: calcChannel< 73>(ch, { bufs[i], num }); break;
+            case  74: calcChannel< 74>(ch, { bufs[i], num }); break;
+            case  75: calcChannel< 75>(ch, { bufs[i], num }); break;
+            case  76: calcChannel< 76>(ch, { bufs[i], num }); break;
+            case  77: calcChannel< 77>(ch, { bufs[i], num }); break;
+            case  78: calcChannel< 78>(ch, { bufs[i], num }); break;
+            case  79: calcChannel< 79>(ch, { bufs[i], num }); break;
+            case  80: calcChannel< 80>(ch, { bufs[i], num }); break;
+            case  81: calcChannel< 81>(ch, { bufs[i], num }); break;
+            case  82: calcChannel< 82>(ch, { bufs[i], num }); break;
+            case  83: calcChannel< 83>(ch, { bufs[i], num }); break;
+            case  84: calcChannel< 84>(ch, { bufs[i], num }); break;
+            case  85: calcChannel< 85>(ch, { bufs[i], num }); break;
+            case  86: calcChannel< 86>(ch, { bufs[i], num }); break;
+            case  87: calcChannel< 87>(ch, { bufs[i], num }); break;
+            case  88: calcChannel< 88>(ch, { bufs[i], num }); break;
+            case  89: calcChannel< 89>(ch, { bufs[i], num }); break;
+            case  90: calcChannel< 90>(ch, { bufs[i], num }); break;
+            case  91: calcChannel< 91>(ch, { bufs[i], num }); break;
+            case  92: calcChannel< 92>(ch, { bufs[i], num }); break;
+            case  93: calcChannel< 93>(ch, { bufs[i], num }); break;
+            case  94: calcChannel< 94>(ch, { bufs[i], num }); break;
+            case  95: calcChannel< 95>(ch, { bufs[i], num }); break;
+            case  96: calcChannel< 96>(ch, { bufs[i], num }); break;
+            case  97: calcChannel< 97>(ch, { bufs[i], num }); break;
+            case  98: calcChannel< 98>(ch, { bufs[i], num }); break;
+            case  99: calcChannel< 99>(ch, { bufs[i], num }); break;
+            case 100: calcChannel<100>(ch, { bufs[i], num }); break;
+            case 101: calcChannel<101>(ch, { bufs[i], num }); break;
+            case 102: calcChannel<102>(ch, { bufs[i], num }); break;
+            case 103: calcChannel<103>(ch, { bufs[i], num }); break;
+            case 104: calcChannel<104>(ch, { bufs[i], num }); break;
+            case 105: calcChannel<105>(ch, { bufs[i], num }); break;
+            case 106: calcChannel<106>(ch, { bufs[i], num }); break;
+            case 107: calcChannel<107>(ch, { bufs[i], num }); break;
+            case 108: calcChannel<108>(ch, { bufs[i], num }); break;
+            case 109: calcChannel<109>(ch, { bufs[i], num }); break;
+            case 110: calcChannel<110>(ch, { bufs[i], num }); break;
+            case 111: calcChannel<111>(ch, { bufs[i], num }); break;
+            case 112: calcChannel<112>(ch, { bufs[i], num }); break;
+            case 113: calcChannel<113>(ch, { bufs[i], num }); break;
+            case 114: calcChannel<114>(ch, { bufs[i], num }); break;
+            case 115: calcChannel<115>(ch, { bufs[i], num }); break;
+            case 116: calcChannel<116>(ch, { bufs[i], num }); break;
+            case 117: calcChannel<117>(ch, { bufs[i], num }); break;
+            case 118: calcChannel<118>(ch, { bufs[i], num }); break;
+            case 119: calcChannel<119>(ch, { bufs[i], num }); break;
+            case 120: calcChannel<120>(ch, { bufs[i], num }); break;
+            case 121: calcChannel<121>(ch, { bufs[i], num }); break;
+            case 122: calcChannel<122>(ch, { bufs[i], num }); break;
+            case 123: calcChannel<123>(ch, { bufs[i], num }); break;
+            case 124: calcChannel<124>(ch, { bufs[i], num }); break;
+            case 125: calcChannel<125>(ch, { bufs[i], num }); break;
+            case 126: calcChannel<126>(ch, { bufs[i], num }); break;
+            case 127: calcChannel<127>(ch, { bufs[i], num }); break;
+            default: UNREACHABLE;
             }
         }
+        else {
+            bufs[i] = nullptr;
+        }
+    }
+    // update AM, PM unit
+    pm_phase += num;
+    am_phase = (am_phase + num) % (LFO_AM_TAB_ELEMENTS * 64);
 
-        void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
-        {
-            assert(num != 0);
+    if (isRhythm()) {
+        bufs[6] = nullptr;
+        bufs[7] = nullptr;
+        bufs[8] = nullptr;
 
-            for (auto i : xrange(isRhythm() ? 6 : 9)) {
+        Channel& ch6 = channels[6];
+        Channel& ch7 = channels[7];
+        Channel& ch8 = channels[8];
+
+        unsigned old_noise = noise_seed;
+        unsigned old_cPhase7 = ch7.mod.cPhase;
+        unsigned old_cPhase8 = ch8.car.cPhase;
+
+        if (ch6.car.isActive()) {
+            for (auto sample : xrange(num)) {
+                bufs[9][sample] += narrow_cast<float>(
+                    2 * ch6.car.calc_slot_car(false, false,
+                        0, 0, ch6.mod.calc_slot_mod(
+                        false, false, false, 0, 0, 0), 0));
+            }
+        }
+        else {
+            bufs[9] = nullptr;
+        }
+
+        if (ch7.car.isActive()) {
+            for (auto sample : xrange(num)) {
+                noise_seed >>= 1;
+                bool noise_bit = noise_seed & 1;
+                if (noise_bit) noise_seed ^= 0x8003020;
+                bufs[10][sample] += narrow_cast<float>(
+                    -2 * ch7.car.calc_slot_snare(noise_bit));
+            }
+        }
+        else {
+            bufs[10] = nullptr;
+        }
+
+        if (ch8.car.isActive()) {
+            for (auto sample : xrange(num)) {
+                unsigned phase7 = ch7.mod.calc_phase(0);
+                unsigned phase8 = ch8.car.calc_phase(0);
+                bufs[11][sample] += narrow_cast<float>(
+                    -2 * ch8.car.calc_slot_cym(phase7, phase8));
+            }
+        }
+        else {
+            bufs[11] = nullptr;
+        }
+
+        if (ch7.mod.isActive()) {
+            // restore noise, ch7/8 cPhase
+            noise_seed = old_noise;
+            ch7.mod.cPhase = old_cPhase7;
+            ch8.car.cPhase = old_cPhase8;
+            for (auto sample : xrange(num)) {
+                noise_seed >>= 1;
+                bool noise_bit = noise_seed & 1;
+                if (noise_bit) noise_seed ^= 0x8003020;
+                unsigned phase7 = ch7.mod.calc_phase(0);
+                unsigned phase8 = ch8.car.calc_phase(0);
+                bufs[12][sample] += narrow_cast<float>(
+                    2 * ch7.mod.calc_slot_hat(phase7, phase8, noise_bit));
+            }
+        }
+        else {
+            bufs[12] = nullptr;
+        }
+
+        if (ch8.mod.isActive()) {
+            for (auto sample : xrange(num)) {
+                bufs[13][sample] += narrow_cast<float>(
+                    2 * ch8.mod.calc_slot_tom());
+            }
+        }
+        else {
+            bufs[13] = nullptr;
+        }
+    }
+    else {
+        bufs[9] = nullptr;
+        bufs[10] = nullptr;
+        bufs[11] = nullptr;
+        bufs[12] = nullptr;
+        bufs[13] = nullptr;
+    }
+}
+
+void YM2413::writePort(bool port, uint8_t value, int /*offset*/)
+{
+    if (port == 0) {
+        registerLatch = value;
+    }
+    else {
+        writeReg(registerLatch & 0x3f, value);
+    }
+}
+
+void YM2413::pokeReg(uint8_t r, uint8_t data)
+{
+    writeReg(r, data);
+}
+
+void YM2413::writeReg(uint8_t r, uint8_t data)
+{
+    assert(r < 0x40);
+
+    switch (r) {
+    case 0x00: {
+        reg[r] = data;
+        patches[0][0].AMPM = (data >> 6) & 3;
+        patches[0][0].EG = (data >> 5) & 1;
+        patches[0][0].setKR((data >> 4) & 1);
+        patches[0][0].setML((data >> 0) & 15);
+        for (auto i : xrange(isRhythm() ? 6 : 9)) {
+            if ((reg[0x30 + i] & 0xF0) == 0) {
                 Channel& ch = channels[i];
-                if (ch.car.isActive()) {
-                    // Below we choose between 128 specialized versions of
-                    // calcChannel(). This allows to move a lot of
-                    // conditional code out of the inner-loop.
-                    bool carFixedEnv = ch.car.state == one_of(SUSHOLD, FINISH);
-                    bool modFixedEnv = ch.mod.state == one_of(SUSHOLD, FINISH);
-                    if (ch.car.state == SETTLE) {
-                        modFixedEnv = false;
-                    }
-                    unsigned flags = (ch.car.patch.AMPM << 0) |
-                        (ch.mod.patch.AMPM << 2) |
-                        ((ch.mod.patch.FB != 0) << 4) |
-                        (carFixedEnv << 5) |
-                        (modFixedEnv << 6);
-                    switch (flags) {
-                    case   0: calcChannel<  0>(ch, { bufs[i], num }); break;
-                    case   1: calcChannel<  1>(ch, { bufs[i], num }); break;
-                    case   2: calcChannel<  2>(ch, { bufs[i], num }); break;
-                    case   3: calcChannel<  3>(ch, { bufs[i], num }); break;
-                    case   4: calcChannel<  4>(ch, { bufs[i], num }); break;
-                    case   5: calcChannel<  5>(ch, { bufs[i], num }); break;
-                    case   6: calcChannel<  6>(ch, { bufs[i], num }); break;
-                    case   7: calcChannel<  7>(ch, { bufs[i], num }); break;
-                    case   8: calcChannel<  8>(ch, { bufs[i], num }); break;
-                    case   9: calcChannel<  9>(ch, { bufs[i], num }); break;
-                    case  10: calcChannel< 10>(ch, { bufs[i], num }); break;
-                    case  11: calcChannel< 11>(ch, { bufs[i], num }); break;
-                    case  12: calcChannel< 12>(ch, { bufs[i], num }); break;
-                    case  13: calcChannel< 13>(ch, { bufs[i], num }); break;
-                    case  14: calcChannel< 14>(ch, { bufs[i], num }); break;
-                    case  15: calcChannel< 15>(ch, { bufs[i], num }); break;
-                    case  16: calcChannel< 16>(ch, { bufs[i], num }); break;
-                    case  17: calcChannel< 17>(ch, { bufs[i], num }); break;
-                    case  18: calcChannel< 18>(ch, { bufs[i], num }); break;
-                    case  19: calcChannel< 19>(ch, { bufs[i], num }); break;
-                    case  20: calcChannel< 20>(ch, { bufs[i], num }); break;
-                    case  21: calcChannel< 21>(ch, { bufs[i], num }); break;
-                    case  22: calcChannel< 22>(ch, { bufs[i], num }); break;
-                    case  23: calcChannel< 23>(ch, { bufs[i], num }); break;
-                    case  24: calcChannel< 24>(ch, { bufs[i], num }); break;
-                    case  25: calcChannel< 25>(ch, { bufs[i], num }); break;
-                    case  26: calcChannel< 26>(ch, { bufs[i], num }); break;
-                    case  27: calcChannel< 27>(ch, { bufs[i], num }); break;
-                    case  28: calcChannel< 28>(ch, { bufs[i], num }); break;
-                    case  29: calcChannel< 29>(ch, { bufs[i], num }); break;
-                    case  30: calcChannel< 30>(ch, { bufs[i], num }); break;
-                    case  31: calcChannel< 31>(ch, { bufs[i], num }); break;
-                    case  32: calcChannel< 32>(ch, { bufs[i], num }); break;
-                    case  33: calcChannel< 33>(ch, { bufs[i], num }); break;
-                    case  34: calcChannel< 34>(ch, { bufs[i], num }); break;
-                    case  35: calcChannel< 35>(ch, { bufs[i], num }); break;
-                    case  36: calcChannel< 36>(ch, { bufs[i], num }); break;
-                    case  37: calcChannel< 37>(ch, { bufs[i], num }); break;
-                    case  38: calcChannel< 38>(ch, { bufs[i], num }); break;
-                    case  39: calcChannel< 39>(ch, { bufs[i], num }); break;
-                    case  40: calcChannel< 40>(ch, { bufs[i], num }); break;
-                    case  41: calcChannel< 41>(ch, { bufs[i], num }); break;
-                    case  42: calcChannel< 42>(ch, { bufs[i], num }); break;
-                    case  43: calcChannel< 43>(ch, { bufs[i], num }); break;
-                    case  44: calcChannel< 44>(ch, { bufs[i], num }); break;
-                    case  45: calcChannel< 45>(ch, { bufs[i], num }); break;
-                    case  46: calcChannel< 46>(ch, { bufs[i], num }); break;
-                    case  47: calcChannel< 47>(ch, { bufs[i], num }); break;
-                    case  48: calcChannel< 48>(ch, { bufs[i], num }); break;
-                    case  49: calcChannel< 49>(ch, { bufs[i], num }); break;
-                    case  50: calcChannel< 50>(ch, { bufs[i], num }); break;
-                    case  51: calcChannel< 51>(ch, { bufs[i], num }); break;
-                    case  52: calcChannel< 52>(ch, { bufs[i], num }); break;
-                    case  53: calcChannel< 53>(ch, { bufs[i], num }); break;
-                    case  54: calcChannel< 54>(ch, { bufs[i], num }); break;
-                    case  55: calcChannel< 55>(ch, { bufs[i], num }); break;
-                    case  56: calcChannel< 56>(ch, { bufs[i], num }); break;
-                    case  57: calcChannel< 57>(ch, { bufs[i], num }); break;
-                    case  58: calcChannel< 58>(ch, { bufs[i], num }); break;
-                    case  59: calcChannel< 59>(ch, { bufs[i], num }); break;
-                    case  60: calcChannel< 60>(ch, { bufs[i], num }); break;
-                    case  61: calcChannel< 61>(ch, { bufs[i], num }); break;
-                    case  62: calcChannel< 62>(ch, { bufs[i], num }); break;
-                    case  63: calcChannel< 63>(ch, { bufs[i], num }); break;
-                    case  64: calcChannel< 64>(ch, { bufs[i], num }); break;
-                    case  65: calcChannel< 65>(ch, { bufs[i], num }); break;
-                    case  66: calcChannel< 66>(ch, { bufs[i], num }); break;
-                    case  67: calcChannel< 67>(ch, { bufs[i], num }); break;
-                    case  68: calcChannel< 68>(ch, { bufs[i], num }); break;
-                    case  69: calcChannel< 69>(ch, { bufs[i], num }); break;
-                    case  70: calcChannel< 70>(ch, { bufs[i], num }); break;
-                    case  71: calcChannel< 71>(ch, { bufs[i], num }); break;
-                    case  72: calcChannel< 72>(ch, { bufs[i], num }); break;
-                    case  73: calcChannel< 73>(ch, { bufs[i], num }); break;
-                    case  74: calcChannel< 74>(ch, { bufs[i], num }); break;
-                    case  75: calcChannel< 75>(ch, { bufs[i], num }); break;
-                    case  76: calcChannel< 76>(ch, { bufs[i], num }); break;
-                    case  77: calcChannel< 77>(ch, { bufs[i], num }); break;
-                    case  78: calcChannel< 78>(ch, { bufs[i], num }); break;
-                    case  79: calcChannel< 79>(ch, { bufs[i], num }); break;
-                    case  80: calcChannel< 80>(ch, { bufs[i], num }); break;
-                    case  81: calcChannel< 81>(ch, { bufs[i], num }); break;
-                    case  82: calcChannel< 82>(ch, { bufs[i], num }); break;
-                    case  83: calcChannel< 83>(ch, { bufs[i], num }); break;
-                    case  84: calcChannel< 84>(ch, { bufs[i], num }); break;
-                    case  85: calcChannel< 85>(ch, { bufs[i], num }); break;
-                    case  86: calcChannel< 86>(ch, { bufs[i], num }); break;
-                    case  87: calcChannel< 87>(ch, { bufs[i], num }); break;
-                    case  88: calcChannel< 88>(ch, { bufs[i], num }); break;
-                    case  89: calcChannel< 89>(ch, { bufs[i], num }); break;
-                    case  90: calcChannel< 90>(ch, { bufs[i], num }); break;
-                    case  91: calcChannel< 91>(ch, { bufs[i], num }); break;
-                    case  92: calcChannel< 92>(ch, { bufs[i], num }); break;
-                    case  93: calcChannel< 93>(ch, { bufs[i], num }); break;
-                    case  94: calcChannel< 94>(ch, { bufs[i], num }); break;
-                    case  95: calcChannel< 95>(ch, { bufs[i], num }); break;
-                    case  96: calcChannel< 96>(ch, { bufs[i], num }); break;
-                    case  97: calcChannel< 97>(ch, { bufs[i], num }); break;
-                    case  98: calcChannel< 98>(ch, { bufs[i], num }); break;
-                    case  99: calcChannel< 99>(ch, { bufs[i], num }); break;
-                    case 100: calcChannel<100>(ch, { bufs[i], num }); break;
-                    case 101: calcChannel<101>(ch, { bufs[i], num }); break;
-                    case 102: calcChannel<102>(ch, { bufs[i], num }); break;
-                    case 103: calcChannel<103>(ch, { bufs[i], num }); break;
-                    case 104: calcChannel<104>(ch, { bufs[i], num }); break;
-                    case 105: calcChannel<105>(ch, { bufs[i], num }); break;
-                    case 106: calcChannel<106>(ch, { bufs[i], num }); break;
-                    case 107: calcChannel<107>(ch, { bufs[i], num }); break;
-                    case 108: calcChannel<108>(ch, { bufs[i], num }); break;
-                    case 109: calcChannel<109>(ch, { bufs[i], num }); break;
-                    case 110: calcChannel<110>(ch, { bufs[i], num }); break;
-                    case 111: calcChannel<111>(ch, { bufs[i], num }); break;
-                    case 112: calcChannel<112>(ch, { bufs[i], num }); break;
-                    case 113: calcChannel<113>(ch, { bufs[i], num }); break;
-                    case 114: calcChannel<114>(ch, { bufs[i], num }); break;
-                    case 115: calcChannel<115>(ch, { bufs[i], num }); break;
-                    case 116: calcChannel<116>(ch, { bufs[i], num }); break;
-                    case 117: calcChannel<117>(ch, { bufs[i], num }); break;
-                    case 118: calcChannel<118>(ch, { bufs[i], num }); break;
-                    case 119: calcChannel<119>(ch, { bufs[i], num }); break;
-                    case 120: calcChannel<120>(ch, { bufs[i], num }); break;
-                    case 121: calcChannel<121>(ch, { bufs[i], num }); break;
-                    case 122: calcChannel<122>(ch, { bufs[i], num }); break;
-                    case 123: calcChannel<123>(ch, { bufs[i], num }); break;
-                    case 124: calcChannel<124>(ch, { bufs[i], num }); break;
-                    case 125: calcChannel<125>(ch, { bufs[i], num }); break;
-                    case 126: calcChannel<126>(ch, { bufs[i], num }); break;
-                    case 127: calcChannel<127>(ch, { bufs[i], num }); break;
-                    default: UNREACHABLE;
-                    }
-                }
-                else {
-                    bufs[i] = nullptr;
-                }
-            }
-            // update AM, PM unit
-            pm_phase += num;
-            am_phase = (am_phase + num) % (LFO_AM_TAB_ELEMENTS * 64);
-
-            if (isRhythm()) {
-                bufs[6] = nullptr;
-                bufs[7] = nullptr;
-                bufs[8] = nullptr;
-
-                Channel& ch6 = channels[6];
-                Channel& ch7 = channels[7];
-                Channel& ch8 = channels[8];
-
-                unsigned old_noise = noise_seed;
-                unsigned old_cPhase7 = ch7.mod.cPhase;
-                unsigned old_cPhase8 = ch8.car.cPhase;
-
-                if (ch6.car.isActive()) {
-                    for (auto sample : xrange(num)) {
-                        bufs[9][sample] += narrow_cast<float>(
-                            2 * ch6.car.calc_slot_car<false, false>(
-                                0, 0, ch6.mod.calc_slot_mod<
-                                false, false, false>(0, 0, 0), 0));
-                    }
-                }
-                else {
-                    bufs[9] = nullptr;
-                }
-
-                if (ch7.car.isActive()) {
-                    for (auto sample : xrange(num)) {
-                        noise_seed >>= 1;
-                        bool noise_bit = noise_seed & 1;
-                        if (noise_bit) noise_seed ^= 0x8003020;
-                        bufs[10][sample] += narrow_cast<float>(
-                            -2 * ch7.car.calc_slot_snare(noise_bit));
-                    }
-                }
-                else {
-                    bufs[10] = nullptr;
-                }
-
-                if (ch8.car.isActive()) {
-                    for (auto sample : xrange(num)) {
-                        unsigned phase7 = ch7.mod.calc_phase(0);
-                        unsigned phase8 = ch8.car.calc_phase(0);
-                        bufs[11][sample] += narrow_cast<float>(
-                            -2 * ch8.car.calc_slot_cym(phase7, phase8));
-                    }
-                }
-                else {
-                    bufs[11] = nullptr;
-                }
-
-                if (ch7.mod.isActive()) {
-                    // restore noise, ch7/8 cPhase
-                    noise_seed = old_noise;
-                    ch7.mod.cPhase = old_cPhase7;
-                    ch8.car.cPhase = old_cPhase8;
-                    for (auto sample : xrange(num)) {
-                        noise_seed >>= 1;
-                        bool noise_bit = noise_seed & 1;
-                        if (noise_bit) noise_seed ^= 0x8003020;
-                        unsigned phase7 = ch7.mod.calc_phase(0);
-                        unsigned phase8 = ch8.car.calc_phase(0);
-                        bufs[12][sample] += narrow_cast<float>(
-                            2 * ch7.mod.calc_slot_hat(phase7, phase8, noise_bit));
-                    }
-                }
-                else {
-                    bufs[12] = nullptr;
-                }
-
-                if (ch8.mod.isActive()) {
-                    for (auto sample : xrange(num)) {
-                        bufs[13][sample] += narrow_cast<float>(
-                            2 * ch8.mod.calc_slot_tom());
-                    }
-                }
-                else {
-                    bufs[13] = nullptr;
-                }
-            }
-            else {
-                bufs[9] = nullptr;
-                bufs[10] = nullptr;
-                bufs[11] = nullptr;
-                bufs[12] = nullptr;
-                bufs[13] = nullptr;
+                ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
+                uint16_t freq = getFreq(i);
+                ch.mod.updatePG(freq);
+                ch.mod.updateRKS(freq);
+                ch.mod.updateEG();
             }
         }
-
-        void YM2413::writePort(bool port, uint8_t value, int /*offset*/)
-        {
-            if (port == 0) {
-                registerLatch = value;
-            }
-            else {
-                writeReg(registerLatch & 0x3f, value);
+        break;
+    }
+    case 0x01: {
+        reg[r] = data;
+        patches[0][1].AMPM = (data >> 6) & 3;
+        patches[0][1].EG = (data >> 5) & 1;
+        patches[0][1].setKR((data >> 4) & 1);
+        patches[0][1].setML((data >> 0) & 15);
+        for (auto i : xrange(isRhythm() ? 6 : 9)) {
+            if ((reg[0x30 + i] & 0xF0) == 0) {
+                Channel& ch = channels[i];
+                ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
+                uint16_t freq = getFreq(i);
+                ch.car.updatePG(freq);
+                ch.car.updateRKS(freq);
+                ch.car.updateEG();
             }
         }
-
-        void YM2413::pokeReg(uint8_t r, uint8_t data)
-        {
-            writeReg(r, data);
+        break;
+    }
+    case 0x02: {
+        reg[r] = data;
+        patches[0][0].setKL((data >> 6) & 3);
+        patches[0][0].setTL((data >> 0) & 63);
+        for (auto i : xrange(isRhythm() ? 6 : 9)) {
+            if ((reg[0x30 + i] & 0xF0) == 0) {
+                Channel& ch = channels[i];
+                ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
+                bool actAsCarrier = (i >= 7) && isRhythm();
+                assert(!actAsCarrier); (void)actAsCarrier;
+                ch.mod.updateTLL(getFreq(i), false);
+            }
         }
+        break;
+    }
+    case 0x03: {
+        reg[r] = data;
+        patches[0][1].setKL((data >> 6) & 3);
+        patches[0][1].setWF((data >> 4) & 1);
+        patches[0][0].setWF((data >> 3) & 1);
+        patches[0][0].setFB((data >> 0) & 7);
+        for (auto i : xrange(isRhythm() ? 6 : 9)) {
+            if ((reg[0x30 + i] & 0xF0) == 0) {
+                Channel& ch = channels[i];
+                ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
+            }
+        }
+        break;
+    }
+    case 0x04: {
+        reg[r] = data;
+        patches[0][0].AR = (data >> 4) & 15;
+        patches[0][0].DR = (data >> 0) & 15;
+        for (auto i : xrange(isRhythm() ? 6 : 9)) {
+            if ((reg[0x30 + i] & 0xF0) == 0) {
+                Channel& ch = channels[i];
+                ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
+                ch.mod.updateEG();
+                if (ch.mod.state == ATTACK) {
+                    ch.mod.setEnvelopeState(ATTACK);
+                }
+            }
+        }
+        break;
+    }
+    case 0x05: {
+        reg[r] = data;
+        patches[0][1].AR = (data >> 4) & 15;
+        patches[0][1].DR = (data >> 0) & 15;
+        for (auto i : xrange(isRhythm() ? 6 : 9)) {
+            if ((reg[0x30 + i] & 0xF0) == 0) {
+                Channel& ch = channels[i];
+                ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
+                ch.car.updateEG();
+                if (ch.car.state == ATTACK) {
+                    ch.car.setEnvelopeState(ATTACK);
+                }
+            }
+        }
+        break;
+    }
+    case 0x06: {
+        reg[r] = data;
+        patches[0][0].setSL((data >> 4) & 15);
+        patches[0][0].RR = (data >> 0) & 15;
+        for (auto i : xrange(isRhythm() ? 6 : 9)) {
+            if ((reg[0x30 + i] & 0xF0) == 0) {
+                Channel& ch = channels[i];
+                ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
+                ch.mod.updateEG();
+                if (ch.mod.state == DECAY) {
+                    ch.mod.setEnvelopeState(DECAY);
+                }
+            }
+        }
+        break;
+    }
+    case 0x07: {
+        reg[r] = data;
+        patches[0][1].setSL((data >> 4) & 15);
+        patches[0][1].RR = (data >> 0) & 15;
+        for (auto i : xrange(isRhythm() ? 6 : 9)) {
+            if ((reg[0x30 + i] & 0xF0) == 0) {
+                Channel& ch = channels[i];
+                ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
+                ch.car.updateEG();
+                if (ch.car.state == DECAY) {
+                    ch.car.setEnvelopeState(DECAY);
+                }
+            }
+        }
+        break;
+    }
+    case 0x0E: {
+        uint8_t old = reg[r];
+        reg[r] = data;
+        setRhythmFlags(old);
+        break;
+    }
+    case 0x19: case 0x1A: case 0x1B: case 0x1C:
+    case 0x1D: case 0x1E: case 0x1F:
+        r -= 9; // verified on real YM2413
+        [[fallthrough]];
+    case 0x10: case 0x11: case 0x12: case 0x13: case 0x14:
+    case 0x15: case 0x16: case 0x17: case 0x18: {
+        reg[r] = data;
+        unsigned cha = r & 0x0F; assert(cha < 9);
+        Channel& ch = channels[cha];
+        bool actAsCarrier = (cha >= 7) && isRhythm();
+        uint16_t freq = getFreq(cha);
+        ch.mod.updateAll(freq, actAsCarrier);
+        ch.car.updateAll(freq, true);
+        break;
+    }
+    case 0x29: case 0x2A: case 0x2B: case 0x2C:
+    case 0x2D: case 0x2E: case 0x2F:
+        r -= 9; // verified on real YM2413
+        [[fallthrough]];
+    case 0x20: case 0x21: case 0x22: case 0x23: case 0x24:
+    case 0x25: case 0x26: case 0x27: case 0x28: {
+        reg[r] = data;
+        unsigned cha = r & 0x0F; assert(cha < 9);
+        Channel& ch = channels[cha];
+        bool modActAsCarrier = (cha >= 7) && isRhythm();
+        ch.setSustain((data >> 5) & 1, modActAsCarrier);
+        if (data & 0x10) {
+            ch.keyOn();
+        }
+        else {
+            ch.keyOff();
+        }
+        uint16_t freq = getFreq(cha);
+        ch.mod.updateAll(freq, modActAsCarrier);
+        ch.car.updateAll(freq, true);
+        break;
+    }
+    case 0x39: case 0x3A: case 0x3B: case 0x3C:
+    case 0x3D: case 0x3E: case 0x3F:
+        r -= 9; // verified on real YM2413
+        [[fallthrough]];
+    case 0x30: case 0x31: case 0x32: case 0x33: case 0x34:
+    case 0x35: case 0x36: case 0x37: case 0x38: {
+        reg[r] = data;
+        unsigned cha = r & 0x0F; assert(cha < 9);
+        Channel& ch = channels[cha];
+        if (isRhythm() && (cha >= 6)) {
+            if (cha > 6) {
+                // channel 7 or 8 in rythm mode
+                ch.mod.setVolume(data >> 4);
+            }
+        }
+        else {
+            ch.setPatch(getPatch(data >> 4, false), getPatch(data >> 4, true));
+        }
+        ch.car.setVolume(data & 15);
+        bool actAsCarrier = (cha >= 7) && isRhythm();
+        uint16_t freq = getFreq(cha);
+        ch.mod.updateAll(freq, actAsCarrier);
+        ch.car.updateAll(freq, true);
+        break;
+    }
+    default:
+        break;
+    }
+}
 
-        void YM2413::writeReg(uint8_t r, uint8_t data)
-        {
-            assert(r < 0x40);
+uint8_t YM2413::peekReg(uint8_t r) const
+{
+    return reg[r];
+}
 
-            switch (r) {
-            case 0x00: {
-                reg[r] = data;
-                patches[0][0].AMPM = (data >> 6) & 3;
-                patches[0][0].EG = (data >> 5) & 1;
-                patches[0][0].setKR((data >> 4) & 1);
-                patches[0][0].setML((data >> 0) & 15);
-                for (auto i : xrange(isRhythm() ? 6 : 9)) {
-                    if ((reg[0x30 + i] & 0xF0) == 0) {
-                        Channel& ch = channels[i];
-                        ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                        uint16_t freq = getFreq(i);
-                        ch.mod.updatePG(freq);
-                        ch.mod.updateRKS(freq);
-                        ch.mod.updateEG();
-                    }
+} // namespace YM2413Tim
+
+static constexpr std::initializer_list<enum_string<YM2413Tim::EnvelopeState>> envelopeStateInfo = {
+    { "ATTACK",  YM2413Tim::ATTACK  },
+    { "DECAY",   YM2413Tim::DECAY   },
+    { "SUSHOLD", YM2413Tim::SUSHOLD },
+    { "SUSTAIN", YM2413Tim::SUSTAIN },
+    { "RELEASE", YM2413Tim::RELEASE },
+    { "SETTLE",  YM2413Tim::SETTLE  },
+    { "FINISH",  YM2413Tim::FINISH  }
+};
+SERIALIZE_ENUM(YM2413Tim::EnvelopeState, envelopeStateInfo);
+
+namespace YM2413Tim {
+
+    // version 1: initial version
+    // version 2: don't serialize "type / actAsCarrier" anymore, it's now
+    //            a calculated value
+    // version 3: don't serialize slot_on_flag anymore
+    // version 4: don't serialize volume anymore
+    template<typename Archive>
+    void Slot::serialize(Archive& ar, unsigned /*version*/)
+    {
+        ar.serialize("feedback", feedback,
+            "output", output,
+            "cphase", cPhase,
+            "state", state,
+            "eg_phase", eg_phase,
+            "sustain", sustain);
+
+        // These are restored by calls to
+        //  updateAll():         eg_dPhase, dPhaseDRTableRks, tll, dPhase
+        //  setEnvelopeState():  eg_phase_max
+        //  setPatch():          patch
+        //  setVolume():         volume
+        //  update_key_status(): slot_on_flag
+    }
+
+    // version 1: initial version
+    // version 2: removed patch_number, freq
+    template<typename Archive>
+    void Channel::serialize(Archive& ar, unsigned /*version*/)
+    {
+        ar.serialize("mod", mod,
+            "car", car);
+    }
+
+
+    // version 1: initial version
+    // version 2: 'registers' are moved here (no longer serialized in base class)
+    // version 3: no longer serialize 'user_patch_mod' and 'user_patch_car'
+    // version 4: added 'registerLatch'
+    template<typename Archive>
+    void YM2413::serialize(Archive& ar, unsigned version)
+    {
+        if (ar.versionBelow(version, 2)) ar.beginTag("YM2413Core");
+        ar.serialize("registers", reg);
+        if (ar.versionBelow(version, 2)) ar.endTag("YM2413Core");
+
+        // no need to serialize patches[]
+        //   patches[0] is restored from registers, the others are read-only
+        ar.serialize("channels", channels,
+            "pm_phase", pm_phase,
+            "am_phase", am_phase,
+            "noise_seed", noise_seed);
+
+        if constexpr (Archive::IS_LOADER) {
+            patches[0][0].initModulator(subspan<8>(reg));
+            patches[0][1].initCarrier(subspan<8>(reg));
+            for (auto [i, ch] : enumerate(channels)) {
+                // restore patch
+                unsigned p = ((i >= 6) && isRhythm())
+                    ? unsigned(16 + (i - 6))
+                    : (reg[0x30 + i] >> 4);
+                ch.setPatch(getPatch(p, false), getPatch(p, true)); // before updateAll()
+                // restore volume
+                ch.car.setVolume(reg[0x30 + i] & 15);
+                if (isRhythm() && (i >= 7)) { // ch 7/8 rythm
+                    ch.mod.setVolume(reg[0x30 + i] >> 4);
                 }
-                break;
-            }
-            case 0x01: {
-                reg[r] = data;
-                patches[0][1].AMPM = (data >> 6) & 3;
-                patches[0][1].EG = (data >> 5) & 1;
-                patches[0][1].setKR((data >> 4) & 1);
-                patches[0][1].setML((data >> 0) & 15);
-                for (auto i : xrange(isRhythm() ? 6 : 9)) {
-                    if ((reg[0x30 + i] & 0xF0) == 0) {
-                        Channel& ch = channels[i];
-                        ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                        uint16_t freq = getFreq(i);
-                        ch.car.updatePG(freq);
-                        ch.car.updateRKS(freq);
-                        ch.car.updateEG();
-                    }
-                }
-                break;
-            }
-            case 0x02: {
-                reg[r] = data;
-                patches[0][0].setKL((data >> 6) & 3);
-                patches[0][0].setTL((data >> 0) & 63);
-                for (auto i : xrange(isRhythm() ? 6 : 9)) {
-                    if ((reg[0x30 + i] & 0xF0) == 0) {
-                        Channel& ch = channels[i];
-                        ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                        bool actAsCarrier = (i >= 7) && isRhythm();
-                        assert(!actAsCarrier); (void)actAsCarrier;
-                        ch.mod.updateTLL(getFreq(i), false);
-                    }
-                }
-                break;
-            }
-            case 0x03: {
-                reg[r] = data;
-                patches[0][1].setKL((data >> 6) & 3);
-                patches[0][1].setWF((data >> 4) & 1);
-                patches[0][0].setWF((data >> 3) & 1);
-                patches[0][0].setFB((data >> 0) & 7);
-                for (auto i : xrange(isRhythm() ? 6 : 9)) {
-                    if ((reg[0x30 + i] & 0xF0) == 0) {
-                        Channel& ch = channels[i];
-                        ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                    }
-                }
-                break;
-            }
-            case 0x04: {
-                reg[r] = data;
-                patches[0][0].AR = (data >> 4) & 15;
-                patches[0][0].DR = (data >> 0) & 15;
-                for (auto i : xrange(isRhythm() ? 6 : 9)) {
-                    if ((reg[0x30 + i] & 0xF0) == 0) {
-                        Channel& ch = channels[i];
-                        ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                        ch.mod.updateEG();
-                        if (ch.mod.state == ATTACK) {
-                            ch.mod.setEnvelopeState(ATTACK);
-                        }
-                    }
-                }
-                break;
-            }
-            case 0x05: {
-                reg[r] = data;
-                patches[0][1].AR = (data >> 4) & 15;
-                patches[0][1].DR = (data >> 0) & 15;
-                for (auto i : xrange(isRhythm() ? 6 : 9)) {
-                    if ((reg[0x30 + i] & 0xF0) == 0) {
-                        Channel& ch = channels[i];
-                        ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                        ch.car.updateEG();
-                        if (ch.car.state == ATTACK) {
-                            ch.car.setEnvelopeState(ATTACK);
-                        }
-                    }
-                }
-                break;
-            }
-            case 0x06: {
-                reg[r] = data;
-                patches[0][0].setSL((data >> 4) & 15);
-                patches[0][0].RR = (data >> 0) & 15;
-                for (auto i : xrange(isRhythm() ? 6 : 9)) {
-                    if ((reg[0x30 + i] & 0xF0) == 0) {
-                        Channel& ch = channels[i];
-                        ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                        ch.mod.updateEG();
-                        if (ch.mod.state == DECAY) {
-                            ch.mod.setEnvelopeState(DECAY);
-                        }
-                    }
-                }
-                break;
-            }
-            case 0x07: {
-                reg[r] = data;
-                patches[0][1].setSL((data >> 4) & 15);
-                patches[0][1].RR = (data >> 0) & 15;
-                for (auto i : xrange(isRhythm() ? 6 : 9)) {
-                    if ((reg[0x30 + i] & 0xF0) == 0) {
-                        Channel& ch = channels[i];
-                        ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
-                        ch.car.updateEG();
-                        if (ch.car.state == DECAY) {
-                            ch.car.setEnvelopeState(DECAY);
-                        }
-                    }
-                }
-                break;
-            }
-            case 0x0E: {
-                uint8_t old = reg[r];
-                reg[r] = data;
-                setRhythmFlags(old);
-                break;
-            }
-            case 0x19: case 0x1A: case 0x1B: case 0x1C:
-            case 0x1D: case 0x1E: case 0x1F:
-                r -= 9; // verified on real YM2413
-                [[fallthrough]];
-            case 0x10: case 0x11: case 0x12: case 0x13: case 0x14:
-            case 0x15: case 0x16: case 0x17: case 0x18: {
-                reg[r] = data;
-                unsigned cha = r & 0x0F; assert(cha < 9);
-                Channel& ch = channels[cha];
-                bool actAsCarrier = (cha >= 7) && isRhythm();
-                uint16_t freq = getFreq(cha);
+                // sync various variables
+                bool actAsCarrier = (i >= 7) && isRhythm();
+                uint16_t freq = getFreq(unsigned(i));
                 ch.mod.updateAll(freq, actAsCarrier);
                 ch.car.updateAll(freq, true);
-                break;
+                ch.mod.setEnvelopeState(ch.mod.state);
+                ch.car.setEnvelopeState(ch.car.state);
             }
-            case 0x29: case 0x2A: case 0x2B: case 0x2C:
-            case 0x2D: case 0x2E: case 0x2F:
-                r -= 9; // verified on real YM2413
-                [[fallthrough]];
-            case 0x20: case 0x21: case 0x22: case 0x23: case 0x24:
-            case 0x25: case 0x26: case 0x27: case 0x28: {
-                reg[r] = data;
-                unsigned cha = r & 0x0F; assert(cha < 9);
-                Channel& ch = channels[cha];
-                bool modActAsCarrier = (cha >= 7) && isRhythm();
-                ch.setSustain((data >> 5) & 1, modActAsCarrier);
-                if (data & 0x10) {
-                    ch.keyOn();
-                }
-                else {
-                    ch.keyOff();
-                }
-                uint16_t freq = getFreq(cha);
-                ch.mod.updateAll(freq, modActAsCarrier);
-                ch.car.updateAll(freq, true);
-                break;
-            }
-            case 0x39: case 0x3A: case 0x3B: case 0x3C:
-            case 0x3D: case 0x3E: case 0x3F:
-                r -= 9; // verified on real YM2413
-                [[fallthrough]];
-            case 0x30: case 0x31: case 0x32: case 0x33: case 0x34:
-            case 0x35: case 0x36: case 0x37: case 0x38: {
-                reg[r] = data;
-                unsigned cha = r & 0x0F; assert(cha < 9);
-                Channel& ch = channels[cha];
-                if (isRhythm() && (cha >= 6)) {
-                    if (cha > 6) {
-                        // channel 7 or 8 in rythm mode
-                        ch.mod.setVolume(data >> 4);
-                    }
-                }
-                else {
-                    ch.setPatch(getPatch(data >> 4, false), getPatch(data >> 4, true));
-                }
-                ch.car.setVolume(data & 15);
-                bool actAsCarrier = (cha >= 7) && isRhythm();
-                uint16_t freq = getFreq(cha);
-                ch.mod.updateAll(freq, actAsCarrier);
-                ch.car.updateAll(freq, true);
-                break;
-            }
-            default:
-                break;
-            }
+            update_key_status();
         }
-
-        uint8_t YM2413::peekReg(uint8_t r) const
-        {
-            return reg[r];
+        if (ar.versionAtLeast(version, 4)) {
+            ar.serialize("registerLatch", registerLatch);
         }
-
-    } // namespace YM2413Tim
-
-    static constexpr std::initializer_list<enum_string<YM2413Tim::EnvelopeState>> envelopeStateInfo = {
-        { "ATTACK",  YM2413Tim::ATTACK  },
-        { "DECAY",   YM2413Tim::DECAY   },
-        { "SUSHOLD", YM2413Tim::SUSHOLD },
-        { "SUSTAIN", YM2413Tim::SUSTAIN },
-        { "RELEASE", YM2413Tim::RELEASE },
-        { "SETTLE",  YM2413Tim::SETTLE  },
-        { "FINISH",  YM2413Tim::FINISH  }
-    };
-    SERIALIZE_ENUM(YM2413Tim::EnvelopeState, envelopeStateInfo);
-
-    namespace YM2413Tim {
-
-        // version 1: initial version
-        // version 2: don't serialize "type / actAsCarrier" anymore, it's now
-        //            a calculated value
-        // version 3: don't serialize slot_on_flag anymore
-        // version 4: don't serialize volume anymore
-        template<typename Archive>
-        void Slot::serialize(Archive& ar, unsigned /*version*/)
-        {
-            ar.serialize("feedback", feedback,
-                "output", output,
-                "cphase", cPhase,
-                "state", state,
-                "eg_phase", eg_phase,
-                "sustain", sustain);
-
-            // These are restored by calls to
-            //  updateAll():         eg_dPhase, dPhaseDRTableRks, tll, dPhase
-            //  setEnvelopeState():  eg_phase_max
-            //  setPatch():          patch
-            //  setVolume():         volume
-            //  update_key_status(): slot_on_flag
+        else {
+            // could be restored from MSXMusicBase, worth the effort?
         }
+    }
 
-        // version 1: initial version
-        // version 2: removed patch_number, freq
-        template<typename Archive>
-        void Channel::serialize(Archive& ar, unsigned /*version*/)
-        {
-            ar.serialize("mod", mod,
-                "car", car);
-        }
+} // namespace YM2413Tim
 
-
-        // version 1: initial version
-        // version 2: 'registers' are moved here (no longer serialized in base class)
-        // version 3: no longer serialize 'user_patch_mod' and 'user_patch_car'
-        // version 4: added 'registerLatch'
-        template<typename Archive>
-        void YM2413::serialize(Archive& ar, unsigned version)
-        {
-            if (ar.versionBelow(version, 2)) ar.beginTag("YM2413Core");
-            ar.serialize("registers", reg);
-            if (ar.versionBelow(version, 2)) ar.endTag("YM2413Core");
-
-            // no need to serialize patches[]
-            //   patches[0] is restored from registers, the others are read-only
-            ar.serialize("channels", channels,
-                "pm_phase", pm_phase,
-                "am_phase", am_phase,
-                "noise_seed", noise_seed);
-
-            if constexpr (Archive::IS_LOADER) {
-                patches[0][0].initModulator(subspan<8>(reg));
-                patches[0][1].initCarrier(subspan<8>(reg));
-                for (auto [i, ch] : enumerate(channels)) {
-                    // restore patch
-                    unsigned p = ((i >= 6) && isRhythm())
-                        ? unsigned(16 + (i - 6))
-                        : (reg[0x30 + i] >> 4);
-                    ch.setPatch(getPatch(p, false), getPatch(p, true)); // before updateAll()
-                    // restore volume
-                    ch.car.setVolume(reg[0x30 + i] & 15);
-                    if (isRhythm() && (i >= 7)) { // ch 7/8 rythm
-                        ch.mod.setVolume(reg[0x30 + i] >> 4);
-                    }
-                    // sync various variables
-                    bool actAsCarrier = (i >= 7) && isRhythm();
-                    uint16_t freq = getFreq(unsigned(i));
-                    ch.mod.updateAll(freq, actAsCarrier);
-                    ch.car.updateAll(freq, true);
-                    ch.mod.setEnvelopeState(ch.mod.state);
-                    ch.car.setEnvelopeState(ch.car.state);
-                }
-                update_key_status();
-            }
-            if (ar.versionAtLeast(version, 4)) {
-                ar.serialize("registerLatch", registerLatch);
-            }
-            else {
-                // could be restored from MSXMusicBase, worth the effort?
-            }
-        }
-
-    } // namespace YM2413Tim
-
-    using YM2413Tim::YM2413;
-    INSTANTIATE_SERIALIZE_METHODS(YM2413);
-    REGISTER_POLYMORPHIC_INITIALIZER(YM2413Core, YM2413, "YM2413-Tim");
+using YM2413Tim::YM2413;
+INSTANTIATE_SERIALIZE_METHODS(YM2413);
+REGISTER_POLYMORPHIC_INITIALIZER(YM2413Core, YM2413, "YM2413-Tim");
 
 } // namespace openmsx
