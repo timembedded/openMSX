@@ -27,6 +27,7 @@ public:
 
 private:
     void writeReg(uint8_t r, uint8_t data);
+    void writePatchReg(uint8_t r, uint8_t data);
 
     void keyOn_BD();
     void keyOn_SD();
@@ -62,7 +63,12 @@ private:
     std::array<std::array<Patch, 2>, 19> patches;
 
     /** Registers */
-    std::array<uint8_t, 0x40> reg;
+    uint8_t reg_flags;
+    std::array<uint8_t, 8> reg_instr;
+    std::array<uint16_t, 9> reg_freq; // 12-bit
+    std::array<uint8_t, 9> reg_volume; // 0-15
+    std::array<uint8_t, 9> reg_patch;  // 0-15
+    std::array<uint8_t, 9> reg_key;  // 1-bit
     uint8_t registerLatch;
 
     /** Patches */

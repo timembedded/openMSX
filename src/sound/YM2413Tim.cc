@@ -50,7 +50,10 @@ static constexpr std::array inst_data = {
 
 YM2413::YM2413()
 {
-    ranges::fill(reg, 0); // avoid UMR
+    ranges::fill(reg_instr, 0); // avoid UMR
+    ranges::fill(reg_freq, 0); // avoid UMR
+    ranges::fill(reg_patch, 0); // avoid UMR
+    ranges::fill(reg_volume, 0); // avoid UMR
 
     for (auto i : xrange(16 + 3)) {
         patches[i][0].initModulator(inst_data[i]);
@@ -182,24 +185,24 @@ void YM2413::setRhythmFlags(uint8_t old)
     Channel& ch8 = channels[8];
 
     // flags = X | X | mode | BD | SD | TOM | TC | HH
-    uint8_t flags = reg[0x0E];
+    uint8_t flags = reg_flags;
     if ((flags ^ old) & 0x20) {
         if (flags & 0x20) {
             // OFF -> ON
             ch6.setPatch(getPatch(16, false), getPatch(16, true));
             ch7.setPatch(getPatch(17, false), getPatch(17, true));
-            ch7.mod.setVolume(reg[0x37] >> 4);
+            ch7.mod.setVolume(reg_patch[7]);
             ch8.setPatch(getPatch(18, false), getPatch(18, true));
-            ch8.mod.setVolume(reg[0x38] >> 4);
+            ch8.mod.setVolume(reg_patch[8]);
         }
         else {
             // ON -> OFF
-            ch6.setPatch(getPatch(reg[0x36] >> 4, false), getPatch(reg[0x36] >> 4, true));
+            ch6.setPatch(getPatch(reg_patch[6], false), getPatch(reg_patch[6], true));
             keyOff_BD();
-            ch7.setPatch(getPatch(reg[0x37] >> 4, false), getPatch(reg[0x37] >> 4, true));
+            ch7.setPatch(getPatch(reg_patch[7], false), getPatch(reg_patch[7], true));
             keyOff_SD();
             keyOff_HH();
-            ch8.setPatch(getPatch(reg[0x38] >> 4, false), getPatch(reg[0x38] >> 4, true));
+            ch8.setPatch(getPatch(reg_patch[8], false), getPatch(reg_patch[8], true));
             keyOff_TOM();
             keyOff_CYM();
         }
@@ -226,20 +229,20 @@ void YM2413::setRhythmFlags(uint8_t old)
 void YM2413::update_key_status()
 {
     for (auto [i, ch] : enumerate(channels)) {
-        uint8_t slot_on = (reg[0x20 + i] & 0x10) ? 1 : 0;
+        uint8_t slot_on = reg_key[i] ? 1 : 0;
         ch.mod.slot_on_flag = slot_on;
         ch.car.slot_on_flag = slot_on;
     }
     if (isRhythm()) {
         Channel& ch6 = channels[6];
-        ch6.mod.slot_on_flag |= uint8_t((reg[0x0e] & 0x10) ? 2 : 0); // BD1
-        ch6.car.slot_on_flag |= uint8_t((reg[0x0e] & 0x10) ? 2 : 0); // BD2
+        ch6.mod.slot_on_flag |= uint8_t((reg_flags & 0x10) ? 2 : 0); // BD1
+        ch6.car.slot_on_flag |= uint8_t((reg_flags & 0x10) ? 2 : 0); // BD2
         Channel& ch7 = channels[7];
-        ch7.mod.slot_on_flag |= uint8_t((reg[0x0e] & 0x01) ? 2 : 0); // HH
-        ch7.car.slot_on_flag |= uint8_t((reg[0x0e] & 0x08) ? 2 : 0); // SD
+        ch7.mod.slot_on_flag |= uint8_t((reg_flags & 0x01) ? 2 : 0); // HH
+        ch7.car.slot_on_flag |= uint8_t((reg_flags & 0x08) ? 2 : 0); // SD
         Channel& ch8 = channels[8];
-        ch8.mod.slot_on_flag |= uint8_t((reg[0x0e] & 0x04) ? 2 : 0); // TOM
-        ch8.car.slot_on_flag |= uint8_t((reg[0x0e] & 0x02) ? 2 : 0); // CYM
+        ch8.mod.slot_on_flag |= uint8_t((reg_flags & 0x04) ? 2 : 0); // TOM
+        ch8.car.slot_on_flag |= uint8_t((reg_flags & 0x02) ? 2 : 0); // CYM
     }
 }
 
@@ -250,14 +253,14 @@ float YM2413::getAmplificationFactor() const
 
 bool YM2413::isRhythm() const
 {
-    return (reg[0x0E] & 0x20) != 0;
+    return (reg_flags & 0x20) != 0;
 }
 
 uint16_t YM2413::getFreq(unsigned channel) const
 {
     // combined fnum (=9bit) and block (=3bit)
     assert(channel < 9);
-    return reg[0x10 + channel] | ((reg[0x20 + channel] & 0x0F) << 8);
+    return reg_freq[channel];
 }
 
 Patch& YM2413::getPatch(unsigned instrument, bool carrier)
@@ -447,19 +450,75 @@ void YM2413::pokeReg(uint8_t r, uint8_t data)
     writeReg(r, data);
 }
 
-void YM2413::writeReg(uint8_t r, uint8_t data)
+void YM2413::writePatchReg(uint8_t r, uint8_t data)
 {
-    assert(r < 0x40);
+    assert(r < 8);
 
     switch (r) {
     case 0x00: {
-        reg[r] = data;
         patches[0][0].AMPM = (data >> 6) & 3;
         patches[0][0].EG = (data >> 5) & 1;
         patches[0][0].setKR((data >> 4) & 1);
         patches[0][0].setML((data >> 0) & 15);
+        break;
+    }
+    case 0x01: {
+        patches[0][1].AMPM = (data >> 6) & 3;
+        patches[0][1].EG = (data >> 5) & 1;
+        patches[0][1].setKR((data >> 4) & 1);
+        patches[0][1].setML((data >> 0) & 15);
+        break;
+    }
+    case 0x02: {
+        patches[0][0].setKL((data >> 6) & 3);
+        patches[0][0].setTL((data >> 0) & 63);
+        break;
+    }
+    case 0x03: {
+        patches[0][1].setKL((data >> 6) & 3);
+        patches[0][1].setWF((data >> 4) & 1);
+        patches[0][0].setWF((data >> 3) & 1);
+        patches[0][0].setFB((data >> 0) & 7);
+        break;
+    }
+    case 0x04: {
+        patches[0][0].AR = (data >> 4) & 15;
+        patches[0][0].DR = (data >> 0) & 15;
+        break;
+    }
+    case 0x05: {
+        patches[0][1].AR = (data >> 4) & 15;
+        patches[0][1].DR = (data >> 0) & 15;
+        break;
+    }
+    case 0x06: {
+        patches[0][0].setSL((data >> 4) & 15);
+        patches[0][0].RR = (data >> 0) & 15;
+        break;
+    }
+    case 0x07: {
+        patches[0][1].setSL((data >> 4) & 15);
+        patches[0][1].RR = (data >> 0) & 15;
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void YM2413::writeReg(uint8_t r, uint8_t data)
+{
+    assert(r < 0x40);
+
+    if (r < 8) {
+        reg_instr[r] = data;
+        writePatchReg(r, data);
+    }
+
+    switch (r) {
+    case 0x00: {
         for (auto i : xrange(isRhythm() ? 6 : 9)) {
-            if ((reg[0x30 + i] & 0xF0) == 0) {
+            if (reg_patch[i] == 0) {
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 uint16_t freq = getFreq(i);
@@ -471,13 +530,8 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         break;
     }
     case 0x01: {
-        reg[r] = data;
-        patches[0][1].AMPM = (data >> 6) & 3;
-        patches[0][1].EG = (data >> 5) & 1;
-        patches[0][1].setKR((data >> 4) & 1);
-        patches[0][1].setML((data >> 0) & 15);
         for (auto i : xrange(isRhythm() ? 6 : 9)) {
-            if ((reg[0x30 + i] & 0xF0) == 0) {
+            if (reg_patch[i] == 0) {
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 uint16_t freq = getFreq(i);
@@ -489,11 +543,8 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         break;
     }
     case 0x02: {
-        reg[r] = data;
-        patches[0][0].setKL((data >> 6) & 3);
-        patches[0][0].setTL((data >> 0) & 63);
         for (auto i : xrange(isRhythm() ? 6 : 9)) {
-            if ((reg[0x30 + i] & 0xF0) == 0) {
+            if (reg_patch[i] == 0) {
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 bool actAsCarrier = (i >= 7) && isRhythm();
@@ -504,13 +555,8 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         break;
     }
     case 0x03: {
-        reg[r] = data;
-        patches[0][1].setKL((data >> 6) & 3);
-        patches[0][1].setWF((data >> 4) & 1);
-        patches[0][0].setWF((data >> 3) & 1);
-        patches[0][0].setFB((data >> 0) & 7);
         for (auto i : xrange(isRhythm() ? 6 : 9)) {
-            if ((reg[0x30 + i] & 0xF0) == 0) {
+            if (reg_patch[i] == 0) {
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
             }
@@ -518,11 +564,8 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         break;
     }
     case 0x04: {
-        reg[r] = data;
-        patches[0][0].AR = (data >> 4) & 15;
-        patches[0][0].DR = (data >> 0) & 15;
         for (auto i : xrange(isRhythm() ? 6 : 9)) {
-            if ((reg[0x30 + i] & 0xF0) == 0) {
+            if (reg_patch[i] == 0) {
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 ch.mod.updateEG();
@@ -534,11 +577,8 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         break;
     }
     case 0x05: {
-        reg[r] = data;
-        patches[0][1].AR = (data >> 4) & 15;
-        patches[0][1].DR = (data >> 0) & 15;
         for (auto i : xrange(isRhythm() ? 6 : 9)) {
-            if ((reg[0x30 + i] & 0xF0) == 0) {
+            if (reg_patch[i] == 0) {
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 ch.car.updateEG();
@@ -550,11 +590,8 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         break;
     }
     case 0x06: {
-        reg[r] = data;
-        patches[0][0].setSL((data >> 4) & 15);
-        patches[0][0].RR = (data >> 0) & 15;
         for (auto i : xrange(isRhythm() ? 6 : 9)) {
-            if ((reg[0x30 + i] & 0xF0) == 0) {
+            if (reg_patch[i] == 0) {
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 ch.mod.updateEG();
@@ -566,11 +603,8 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         break;
     }
     case 0x07: {
-        reg[r] = data;
-        patches[0][1].setSL((data >> 4) & 15);
-        patches[0][1].RR = (data >> 0) & 15;
         for (auto i : xrange(isRhythm() ? 6 : 9)) {
-            if ((reg[0x30 + i] & 0xF0) == 0) {
+            if (reg_patch[i] == 0) {
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 ch.car.updateEG();
@@ -582,8 +616,8 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         break;
     }
     case 0x0E: {
-        uint8_t old = reg[r];
-        reg[r] = data;
+        uint8_t old = reg_flags;
+        reg_flags = data;
         setRhythmFlags(old);
         break;
     }
@@ -593,8 +627,8 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         [[fallthrough]];
     case 0x10: case 0x11: case 0x12: case 0x13: case 0x14:
     case 0x15: case 0x16: case 0x17: case 0x18: {
-        reg[r] = data;
         unsigned cha = r & 0x0F; assert(cha < 9);
+        reg_freq[cha] = (reg_freq[cha] & 0xff00) | data;
         Channel& ch = channels[cha];
         bool actAsCarrier = (cha >= 7) && isRhythm();
         uint16_t freq = getFreq(cha);
@@ -608,8 +642,9 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         [[fallthrough]];
     case 0x20: case 0x21: case 0x22: case 0x23: case 0x24:
     case 0x25: case 0x26: case 0x27: case 0x28: {
-        reg[r] = data;
         unsigned cha = r & 0x0F; assert(cha < 9);
+        reg_freq[cha] = (reg_freq[cha] & 0x00ff) | ((data & 15) << 8);
+        reg_key[cha] = (data >> 4) & 1;
         Channel& ch = channels[cha];
         bool modActAsCarrier = (cha >= 7) && isRhythm();
         ch.setSustain((data >> 5) & 1, modActAsCarrier);
@@ -630,8 +665,9 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         [[fallthrough]];
     case 0x30: case 0x31: case 0x32: case 0x33: case 0x34:
     case 0x35: case 0x36: case 0x37: case 0x38: {
-        reg[r] = data;
         unsigned cha = r & 0x0F; assert(cha < 9);
+        reg_patch[cha] = data >> 4;
+        reg_volume[cha] = data & 15;
         Channel& ch = channels[cha];
         if (isRhythm() && (cha >= 6)) {
             if (cha > 6) {
@@ -656,7 +692,7 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
 
 uint8_t YM2413::peekReg(uint8_t /*r*/) const
 {
-    return 0xff; //reg[r]; The original YM2413 does not allow reading back registers
+    return 0xff; // The original YM2413 does not allow reading back registers
 }
 
 } // namespace YM2413Tim
@@ -715,7 +751,12 @@ namespace YM2413Tim {
     void YM2413::serialize(Archive& ar, unsigned version)
     {
         if (ar.versionBelow(version, 2)) ar.beginTag("YM2413Core");
-        ar.serialize("registers", reg);
+        ar.serialize("registers_instr", reg_instr);
+        ar.serialize("registers_freq", reg_freq);
+        ar.serialize("registers_volume", reg_volume);
+        ar.serialize("registers_patch", reg_patch);
+        ar.serialize("registers_key", reg_key);
+        ar.serialize("registers_flags", reg_flags);
         if (ar.versionBelow(version, 2)) ar.endTag("YM2413Core");
 
         // no need to serialize patches[]
@@ -726,18 +767,18 @@ namespace YM2413Tim {
             "noise_seed", noise_seed);
 
         if constexpr (Archive::IS_LOADER) {
-            patches[0][0].initModulator(subspan<8>(reg));
-            patches[0][1].initCarrier(subspan<8>(reg));
+            patches[0][0].initModulator(reg_instr);
+            patches[0][1].initCarrier(reg_instr);
             for (auto [i, ch] : enumerate(channels)) {
                 // restore patch
                 unsigned p = ((i >= 6) && isRhythm())
                     ? unsigned(16 + (i - 6))
-                    : (reg[0x30 + i] >> 4);
+                    : reg_patch[i];
                 ch.setPatch(getPatch(p, false), getPatch(p, true)); // before updateAll()
                 // restore volume
-                ch.car.setVolume(reg[0x30 + i] & 15);
+                ch.car.setVolume(reg_volume[i]);
                 if (isRhythm() && (i >= 7)) { // ch 7/8 rythm
-                    ch.mod.setVolume(reg[0x30 + i] >> 4);
+                    ch.mod.setVolume(reg_patch[i]);
                 }
                 // sync various variables
                 bool actAsCarrier = (i >= 7) && isRhythm();
