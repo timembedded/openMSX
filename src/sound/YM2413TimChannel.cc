@@ -14,31 +14,38 @@ namespace YM2413Tim {
 // Channel
 //
 
-Channel::Channel()
+Channel::Channel() :
+    slot(Slot::instance())
 {
-    car.sibling = &mod;    // car needs a pointer to its sibling
-    mod.sibling = nullptr; // mod doesn't need this pointer
 }
 
 void Channel::reset()
 {
-    mod.reset();
-    car.reset();
+    slot.select(car);
+    slot.reset();
+    slot.sd->sibling = mod;    // car needs a pointer to its sibling
+    slot.select(mod);
+    slot.reset();
+    slot.sd->sibling = -1;     // mod doesn't need this pointer
 }
 
 // Change a voice
-void Channel::setPatch(const Patch& modPatch, const Patch& carPatch)
+void Channel::setPatch(int modPatch, int carPatch)
 {
-    mod.setPatch(modPatch);
-    car.setPatch(carPatch);
+    slot.select(mod);
+    slot.setPatch(modPatch);
+    slot.select(car);
+    slot.setPatch(carPatch);
 }
 
 // Set sustain parameter
 void Channel::setSustain(bool sustain, bool modActAsCarrier)
 {
-    car.sustain = sustain;
+    slot.select(car);
+    slot.sd->sustain = sustain;
     if (modActAsCarrier) {
-        mod.sustain = sustain;
+        slot.select(mod);
+        slot.sd->sustain = sustain;
     }
 }
 
@@ -48,23 +55,28 @@ void Channel::keyOn()
     // TODO Should we also test mod.slot_on_flag?
     //      Should we    set    mod.slot_on_flag?
     //      Can make a difference for channel 7/8 in rythm mode.
-    if (!car.slot_on_flag) {
-        car.setEnvelopeState(SETTLE);
+    slot.select(car);
+    if (!slot.sd->slot_on_flag) {
+        slot.setEnvelopeState(SETTLE);
         // this will shortly set both car and mod to ATTACK state
     }
-    car.slot_on_flag |= 1;
-    mod.slot_on_flag |= 1;
+    slot.sd->slot_on_flag |= 1;
+    slot.select(mod);
+    slot.sd->slot_on_flag |= 1;
 }
 
 // Channel key off
 void Channel::keyOff()
 {
     // Note: no mod.slotOff() in original code!!!
-    if (car.slot_on_flag) {
-        car.slot_on_flag &= ~1;
-        mod.slot_on_flag &= ~1;
-        if (!car.slot_on_flag) {
-            car.slotOff();
+    slot.select(car);
+    if (slot.sd->slot_on_flag) {
+        slot.sd->slot_on_flag &= ~1;
+        slot.select(mod);
+        slot.sd->slot_on_flag &= ~1;
+        slot.select(car);
+        if (!slot.sd->slot_on_flag) {
+            slot.slotOff();
         }
     }
 }

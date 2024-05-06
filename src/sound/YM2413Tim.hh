@@ -48,6 +48,7 @@ private:
 
 private:
     /** Channel & Slot */
+    Slot &slot;
     std::array<Channel, 9> channels;
 
     /** Pitch Modulator */
@@ -60,7 +61,7 @@ private:
     unsigned noise_seed;
 
     /** Voice Data */
-    std::array<std::array<Patch, 2>, 19> patches;
+    Patch &patch;
 
     /** Registers */
     uint8_t reg_flags;
@@ -72,7 +73,7 @@ private:
     uint8_t registerLatch;
 
     /** Patches */
-    Patch& getPatch(unsigned instrument, bool carrier);
+    int getPatch(unsigned instrument, bool carrier);
 };
 
 } // namespace YM2413Tim

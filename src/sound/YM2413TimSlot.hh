@@ -15,17 +15,24 @@ namespace YM2413Tim {
 // Slot
 //
 class Slot {
-public:
+protected:
     Slot();
+    static Slot _instance;
+
+public:
+    void operator=(const Slot &) = delete;
+    static Slot& instance() { return _instance; }
+
     void reset();
 
+    void select(int num);
     void setEnvelopeState(EnvelopeState state);
     bool isActive() const;
 
     void slotOn();
     void slotOn2();
     void slotOff();
-    void setPatch(const Patch& patch);
+    void setPatch(int voice);
     void setVolume(unsigned value);
 
     unsigned calc_phase(unsigned lfo_pm);
@@ -48,28 +55,35 @@ public:
     template<typename Archive>
     void serialize(Archive& ar, unsigned version);
 
-    // OUTPUT
-    int feedback;
-    int output;     // Output value of slot
+    Patch &patch;
 
-    // for Phase Generator (PG)
-    uint16_t pg_freq;
-    unsigned pg_phase;           // Phase counter
+    struct SlotData {
+        // OUTPUT
+        int feedback;
+        int output;     // Output value of slot
 
-    // for Envelope Generator (EG)
-    unsigned eg_volume;          // Current volume
-    unsigned eg_tll;             // Total Level + Key scale level
-    uint16_t eg_rks;
-    EnvelopeState eg_state;      // Current state
-    EnvPhaseIndex eg_phase;      // Phase
-    EnvPhaseIndex eg_dPhase;     // Phase increment amount
-    EnvPhaseIndex eg_phase_max;
+        // for Phase Generator (PG)
+        uint16_t pg_freq;
+        unsigned pg_phase;           // Phase counter
 
-    uint8_t slot_on_flag;
-    bool sustain;                // Sustain
+        // for Envelope Generator (EG)
+        unsigned eg_volume;          // Current volume
+        unsigned eg_tll;             // Total Level + Key scale level
+        uint16_t eg_rks;
+        EnvelopeState eg_state;      // Current state
+        EnvPhaseIndex eg_phase;      // Phase
+        EnvPhaseIndex eg_dPhase;     // Phase increment amount
+        EnvPhaseIndex eg_phase_max;
 
-    Patch patch;
-    Slot* sibling; // pointer to sibling slot (only valid for car -> mod)
+        uint8_t slot_on_flag;
+        bool sustain;                // Sustain
+
+        int sibling; // pointer to sibling slot (only valid for car -> mod)
+
+        int patch;
+    };
+    SlotData slotData[18];
+    SlotData *sd = slotData;
 };
 
 } // namespace YM2413Tim

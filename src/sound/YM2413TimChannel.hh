@@ -14,12 +14,13 @@ namespace YM2413Tim {
     public:
         Channel();
         void reset();
-        void setPatch(const Patch& modPatch, const Patch& carPatch);
+        void setPatch(int modPatch, int carPatch);
         void setSustain(bool sustain, bool modActAsCarrier);
         void keyOn();
         void keyOff();
 
-        Slot mod, car;
+        int mod, car;
+        Slot &slot;
 
         template<typename Archive>
         void serialize(Archive& ar, unsigned version);

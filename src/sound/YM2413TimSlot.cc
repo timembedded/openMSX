@@ -23,47 +23,56 @@
 namespace openmsx {
 namespace YM2413Tim {
 
+Slot Slot::_instance;
+
 //
 // Slot
 //
 
-Slot::Slot()
+Slot::Slot() :
+    patch(Patch::instance())
 {
 }
 
 void Slot::reset()
 {
-    pg_phase = 0;
-    output = 0;
-    feedback = 0;
+    sd->pg_phase = 0;
+    sd->output = 0;
+    sd->feedback = 0;
     setEnvelopeState(FINISH);
-    eg_tll = 0;
-    sustain = false;
-    eg_volume = TL2EG(0);
-    slot_on_flag = 0;
-    eg_rks = 0;
+    sd->eg_tll = 0;
+    sd->sustain = false;
+    sd->eg_volume = TL2EG(0);
+    sd->slot_on_flag = 0;
+    sd->eg_rks = 0;
+}
+
+void Slot::select(int num)
+{
+    sd = &slotData[num];
+    patch.select(sd->patch);
 }
 
 void Slot::updatePG(uint16_t freq)
 {
-    pg_freq = freq;
+    sd->pg_freq = freq;
 }
 
 void Slot::updateTLL(uint16_t freq, bool actAsCarrier)
 {
-    eg_tll = patch.KL[freq >> 5] + (actAsCarrier ? eg_volume : patch.TL);
+    sd->eg_tll = patch.pd->KL[freq >> 5] + (actAsCarrier ? sd->eg_volume : patch.pd->TL);
 }
 
 void Slot::updateRKS(uint16_t freq)
 {
-    uint16_t rks = freq >> patch.KR;
+    uint16_t rks = freq >> patch.pd->KR;
     assert(rks < 16);
-    eg_rks = rks;
+    sd->eg_rks = rks;
 }
 
 void Slot::updateEG()
 {
-    switch (eg_state) {
+    switch (sd->eg_state) {
     case ATTACK:
         // Original code had separate table for AR, the values in
         // this table were 12 times bigger than the values in the
@@ -74,17 +83,17 @@ void Slot::updateEG()
         // table in the ym2413 application manual (table III-7, page
         // 13). For other chips like OPL1, OPL3 this ratio seems to be
         // different.
-        eg_dPhase = dPhaseDrTab[eg_rks][patch.AR] * 12;
+        sd->eg_dPhase = dPhaseDrTab[sd->eg_rks][patch.pd->AR] * 12;
         break;
     case DECAY:
-        eg_dPhase = dPhaseDrTab[eg_rks][patch.DR];
+        sd->eg_dPhase = dPhaseDrTab[sd->eg_rks][patch.pd->DR];
         break;
     case SUSTAIN:
-        eg_dPhase = dPhaseDrTab[eg_rks][patch.RR];
+        sd->eg_dPhase = dPhaseDrTab[sd->eg_rks][patch.pd->RR];
         break;
     case RELEASE: {
-        unsigned idx = sustain ? 5 : (patch.EG ? patch.RR : 7);
-        eg_dPhase = dPhaseDrTab[eg_rks][idx];
+        unsigned idx = sd->sustain ? 5 : (patch.pd->EG ? patch.pd->RR : 7);
+        sd->eg_dPhase = dPhaseDrTab[sd->eg_rks][idx];
         break;
     }
     case SETTLE:
@@ -101,11 +110,11 @@ void Slot::updateEG()
         // state). Experiments showed that the with key-scaling the
         // output matches closer the real HW. Also all other states use
         // key-scaling.
-        eg_dPhase = (dPhaseDrTab[eg_rks][12]);
+        sd->eg_dPhase = (dPhaseDrTab[sd->eg_rks][12]);
         break;
     case SUSHOLD:
     case FINISH:
-        eg_dPhase = 0;
+        sd->eg_dPhase = 0;
         break;
     }
 }
@@ -120,25 +129,25 @@ void Slot::updateAll(uint16_t freq, bool actAsCarrier)
 
 void Slot::setEnvelopeState(EnvelopeState state)
 {
-    eg_state = state;
-    switch (eg_state) {
+    sd->eg_state = state;
+    switch (sd->eg_state) {
     case ATTACK:
-        eg_phase_max = (patch.AR == 15) ? 0 : EG_DP_MAX;
+        sd->eg_phase_max = (patch.pd->AR == 15) ? 0 : EG_DP_MAX;
         break;
     case DECAY:
-        eg_phase_max = narrow<int>(patch.SL);
+        sd->eg_phase_max = narrow<int>(patch.pd->SL);
         break;
     case SUSHOLD:
-        eg_phase_max = EG_DP_INF;
+        sd->eg_phase_max = EG_DP_INF;
         break;
     case SETTLE:
     case SUSTAIN:
     case RELEASE:
-        eg_phase_max = EG_DP_MAX;
+        sd->eg_phase_max = EG_DP_MAX;
         break;
     case FINISH:
-        eg_phase = EG_DP_MAX;
-        eg_phase_max = EG_DP_INF;
+        sd->eg_phase = EG_DP_MAX;
+        sd->eg_phase_max = EG_DP_INF;
         break;
     }
     updateEG();
@@ -146,76 +155,77 @@ void Slot::setEnvelopeState(EnvelopeState state)
 
 bool Slot::isActive() const
 {
-    return eg_state != FINISH;
+    return sd->eg_state != FINISH;
 }
 
 // Slot key on
 void Slot::slotOn()
 {
     setEnvelopeState(ATTACK);
-    eg_phase = 0;
-    pg_phase = 0;
+    sd->eg_phase = 0;
+    sd->pg_phase = 0;
 }
 
 // Slot key on, without resetting the phase
 void Slot::slotOn2()
 {
     setEnvelopeState(ATTACK);
-    eg_phase = 0;
+    sd->eg_phase = 0;
 }
 
 // Slot key off
 void Slot::slotOff()
 {
-    if (eg_state == FINISH) return; // already in off state
-    if (eg_state == ATTACK) {
-        eg_phase = (arAdjustTab[eg_phase >> EP_FP_BITS /*.toInt()*/]) << EP_FP_BITS;
+    if (sd->eg_state == FINISH) return; // already in off state
+    if (sd->eg_state == ATTACK) {
+        sd->eg_phase = (arAdjustTab[sd->eg_phase >> EP_FP_BITS /*.toInt()*/]) << EP_FP_BITS;
     }
     setEnvelopeState(RELEASE);
 }
 
 
 // Change a rhythm voice
-void Slot::setPatch(const Patch& newPatch)
+void Slot::setPatch(int voice)
 {
-    patch = newPatch; // copy data
-    if ((eg_state == SUSHOLD) && (patch.EG == 0)) {
+    sd->patch = voice;
+    patch.select(sd->patch);
+    if ((sd->eg_state == SUSHOLD) && (patch.pd->EG == 0)) {
         setEnvelopeState(SUSTAIN);
     }
-    setEnvelopeState(eg_state); // recalculate eg_phase_max
+    setEnvelopeState(sd->eg_state); // recalculate eg_phase_max
 }
 
 // Set new volume based on 4-bit register value (0-15).
 void Slot::setVolume(unsigned value)
 {
     // '<< 2' to transform 4 bits to the same range as the 6 bits TL field
-    eg_volume = TL2EG(value << 2);
+    sd->eg_volume = TL2EG(value << 2);
 }
 
 // PG
 unsigned Slot::calc_phase(unsigned lfo_pm)
 {
-    uint16_t fnum = pg_freq & 511;
-    uint16_t block = pg_freq / 512;
-    unsigned tmp = ((2 * fnum + pmTable[fnum >> 6][lfo_pm]) * patch.ML) << block;
+    uint16_t fnum = sd->pg_freq & 511;
+    uint16_t block = sd->pg_freq / 512;
+    unsigned tmp = ((2 * fnum + pmTable[fnum >> 6][lfo_pm]) * patch.pd->ML) << block;
     uint16_t dphase = tmp >> (21 - DP_BITS);
 
-    pg_phase += dphase;
-    return pg_phase >> DP_BASE_BITS;
+    sd->pg_phase += dphase;
+    return sd->pg_phase >> DP_BASE_BITS;
 }
 
 // EG
 void Slot::calc_envelope_outline(unsigned& out)
 {
-    switch (eg_state) {
+    switch (sd->eg_state) {
     case ATTACK:
         out = 0;
-        eg_phase = 0;
+        sd->eg_phase = 0;
         setEnvelopeState(DECAY);
         break;
     case DECAY:
-        eg_phase = eg_phase_max;
-        setEnvelopeState(patch.EG ? SUSHOLD : SUSTAIN);
+        sd->eg_phase = sd->eg_phase_max;
+        setEnvelopeState(patch.pd->EG ? SUSHOLD : SUSTAIN);
         break;
     case SUSTAIN:
     case RELEASE:
@@ -226,7 +236,13 @@ void Slot::calc_envelope_outline(unsigned& out)
         //   When CARRIER envelope gets down to zero level, phases in
         //   BOTH operators are reset (at the same time?).
         slotOn();
-        sibling->slotOn();
+        assert (sd->sibling != -1);
+        if (sd->sibling != -1) {
+            SlotData *sdsave = sd;
+            select(sd->sibling);
+            slotOn();
+            sd = sdsave;
+        }
         break;
     case SUSHOLD:
     case FINISH:
@@ -237,7 +253,7 @@ void Slot::calc_envelope_outline(unsigned& out)
 
 unsigned Slot::calc_envelope(bool HAS_AM, bool FIXED_ENV, int lfo_am, unsigned fixed_env)
 {
-    assert(!FIXED_ENV || (eg_state == one_of(SUSHOLD, FINISH)));
+    assert(!FIXED_ENV || (sd->eg_state == one_of(SUSHOLD, FINISH)));
 
     if (FIXED_ENV) {
         unsigned out = fixed_env;
@@ -251,15 +267,15 @@ unsigned Slot::calc_envelope(bool HAS_AM, bool FIXED_ENV, int lfo_am, unsigned f
         return out;
     }
     else {
-        unsigned out = eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128]
-        if (eg_state == ATTACK) {
+        unsigned out = sd->eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128]
+        if (sd->eg_state == ATTACK) {
             out = arAdjustTab[out]; // [0, 128]
         }
-        eg_phase += eg_dPhase;
-        if (eg_phase >= eg_phase_max) {
+        sd->eg_phase += sd->eg_dPhase;
+        if (sd->eg_phase >= sd->eg_phase_max) {
             calc_envelope_outline(out);
         }
-        out = EG2DB(out + eg_tll); // [0, 732]
+        out = EG2DB(out + sd->eg_tll); // [0, 732]
         if (HAS_AM) {
             out += lfo_am; // [0, 758]
         }
@@ -269,10 +285,10 @@ unsigned Slot::calc_envelope(bool HAS_AM, bool FIXED_ENV, int lfo_am, unsigned f
 
 unsigned Slot::calc_fixed_env(bool HAS_AM) const
 {
-    assert(eg_state == one_of(SUSHOLD, FINISH));
-    assert(eg_dPhase == 0);
-    unsigned out = eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128)
-    out = EG2DB(out + eg_tll); // [0, 480)
+    assert(sd->eg_state == one_of(SUSHOLD, FINISH));
+    assert(sd->eg_dPhase == 0);
+    unsigned out = sd->eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128)
+    out = EG2DB(out + sd->eg_tll); // [0, 480)
     if (!HAS_AM) {
         out |= 3;
     }
@@ -296,24 +312,24 @@ int Slot::calc_slot_car(bool HAS_AM, bool FIXED_ENV, unsigned lfo_pm, int lfo_am
 {
     int phase = narrow<int>(calc_phase(lfo_pm)) + wave2_8pi(fm);
     unsigned egOut = calc_envelope(HAS_AM, FIXED_ENV, lfo_am, fixed_env);
-    int newOutput = dB2LinTab[patch.WF[phase & PG_MASK] + egOut];
-    output = (output + newOutput) >> 1;
-    return output;
+    int newOutput = dB2LinTab[patch.pd->WF[phase & PG_MASK] + egOut];
+    sd->output = (sd->output + newOutput) >> 1;
+    return sd->output;
 }
 
 // MODULATOR
 int Slot::calc_slot_mod(bool HAS_AM, bool HAS_FB, bool FIXED_ENV, unsigned lfo_pm, int lfo_am, unsigned fixed_env)
 {
-    assert((patch.FB != 0) == HAS_FB);
+    assert((patch.pd->FB != 0) == HAS_FB);
     unsigned phase = calc_phase(lfo_pm);
     unsigned egOut = calc_envelope(HAS_AM, FIXED_ENV, lfo_am, fixed_env);
     if (HAS_FB) {
-        phase += wave2_8pi(feedback) >> patch.FB;
+        phase += wave2_8pi(sd->feedback) >> patch.pd->FB;
     }
-    int newOutput = dB2LinTab[patch.WF[phase & PG_MASK] + egOut];
-    feedback = (output + newOutput) >> 1;
-    output = newOutput;
-    return feedback;
+    int newOutput = dB2LinTab[patch.pd->WF[phase & PG_MASK] + egOut];
+    sd->feedback = (sd->output + newOutput) >> 1;
+    sd->output = newOutput;
+    return sd->feedback;
 }
 
 // TOM (ch8 mod)
@@ -321,7 +337,7 @@ int Slot::calc_slot_tom()
 {
     unsigned phase = calc_phase(0);
     unsigned egOut = calc_envelope(false, false, 0, 0);
-    return dB2LinTab[patch.WF[phase & PG_MASK] + egOut];
+    return dB2LinTab[patch.pd->WF[phase & PG_MASK] + egOut];
 }
 
 // SNARE (ch7 car)
