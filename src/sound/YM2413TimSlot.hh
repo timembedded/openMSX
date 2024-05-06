@@ -53,17 +53,18 @@ public:
     int output;     // Output value of slot
 
     // for Phase Generator (PG)
-    unsigned cPhase;        // Phase counter
-    std::array<uint16_t, 8> dPhase; // Phase increment
+    uint16_t pg_freq;
+    unsigned pg_phase;           // Phase counter
 
     // for Envelope Generator (EG)
-    unsigned volume;             // Current volume
-    unsigned tll;                // Total Level + Key scale level
-    std::span<const int, 16> dPhaseDRTableRks; // (converted to EnvPhaseIndex)
-    EnvelopeState state;         // Current state
+    unsigned eg_volume;          // Current volume
+    unsigned eg_tll;             // Total Level + Key scale level
+    uint16_t eg_rks;
+    EnvelopeState eg_state;      // Current state
     EnvPhaseIndex eg_phase;      // Phase
     EnvPhaseIndex eg_dPhase;     // Phase increment amount
     EnvPhaseIndex eg_phase_max;
+
     uint8_t slot_on_flag;
     bool sustain;                // Sustain
 

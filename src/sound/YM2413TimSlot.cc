@@ -28,78 +28,63 @@ namespace YM2413Tim {
 //
 
 Slot::Slot()
-    : dPhaseDRTableRks(dPhaseDrTab[0])
 {
 }
 
 void Slot::reset()
 {
-    cPhase = 0;
-    ranges::fill(dPhase, 0);
+    pg_phase = 0;
     output = 0;
     feedback = 0;
     setEnvelopeState(FINISH);
-    dPhaseDRTableRks = dPhaseDrTab[0];
-    tll = 0;
+    eg_tll = 0;
     sustain = false;
-    volume = TL2EG(0);
+    eg_volume = TL2EG(0);
     slot_on_flag = 0;
+    eg_rks = 0;
 }
 
 void Slot::updatePG(uint16_t freq)
 {
-    // Pre-calculate all phase-increments. The 8 different values are for
-    // the 8 steps of the PM stuff (for mod and car phase calculation).
-    // When PM isn't used then dPhase[0] is used (pmTable[.][0] == 0).
-    // The original Okazaki core calculated the PM stuff in a different
-    // way. This algorithm was copied from the Burczynski core because it
-    // is much more suited for a (cheap) hardware calculation.
-    uint16_t fnum = freq & 511;
-    uint16_t block = freq / 512;
-    for (auto [pm, dP] : enumerate(dPhase)) {
-        unsigned tmp = ((2 * fnum + pmTable[fnum >> 6][pm]) * patch.ML) << block;
-        dP = tmp >> (21 - DP_BITS);
-    }
+    pg_freq = freq;
 }
 
 void Slot::updateTLL(uint16_t freq, bool actAsCarrier)
 {
-    tll = patch.KL[freq >> 5] + (actAsCarrier ? volume : patch.TL);
+    eg_tll = patch.KL[freq >> 5] + (actAsCarrier ? eg_volume : patch.TL);
 }
 
 void Slot::updateRKS(uint16_t freq)
 {
     uint16_t rks = freq >> patch.KR;
     assert(rks < 16);
-    dPhaseDRTableRks = dPhaseDrTab[rks];
+    eg_rks = rks;
 }
 
 void Slot::updateEG()
 {
-    switch (state) {
+    switch (eg_state) {
     case ATTACK:
         // Original code had separate table for AR, the values in
         // this table were 12 times bigger than the values in the
-        // dPhaseDRTableRks table, expect for the value for AR=15.
+        // dPhaseDrTab[eg_rks] table, expect for the value for AR=15.
         // But when AR=15, the value doesn't matter.
         //
         // This factor 12 can also be seen in the attack/decay rates
         // table in the ym2413 application manual (table III-7, page
         // 13). For other chips like OPL1, OPL3 this ratio seems to be
         // different.
-        eg_dPhase = dPhaseDRTableRks[patch.AR] * 12;
+        eg_dPhase = dPhaseDrTab[eg_rks][patch.AR] * 12;
         break;
     case DECAY:
-        eg_dPhase = dPhaseDRTableRks[patch.DR];
+        eg_dPhase = dPhaseDrTab[eg_rks][patch.DR];
         break;
     case SUSTAIN:
-        eg_dPhase = dPhaseDRTableRks[patch.RR];
+        eg_dPhase = dPhaseDrTab[eg_rks][patch.RR];
         break;
     case RELEASE: {
-        unsigned idx = sustain ? 5
-            : (patch.EG ? patch.RR
-                : 7);
-        eg_dPhase = dPhaseDRTableRks[idx];
+        unsigned idx = sustain ? 5 : (patch.EG ? patch.RR : 7);
+        eg_dPhase = dPhaseDrTab[eg_rks][idx];
         break;
     }
     case SETTLE:
@@ -116,7 +101,7 @@ void Slot::updateEG()
         // state). Experiments showed that the with key-scaling the
         // output matches closer the real HW. Also all other states use
         // key-scaling.
-        eg_dPhase = (dPhaseDRTableRks[12]);
+        eg_dPhase = (dPhaseDrTab[eg_rks][12]);
         break;
     case SUSHOLD:
     case FINISH:
@@ -133,10 +118,10 @@ void Slot::updateAll(uint16_t freq, bool actAsCarrier)
     updateEG(); // EG should be updated last
 }
 
-void Slot::setEnvelopeState(EnvelopeState state_)
+void Slot::setEnvelopeState(EnvelopeState state)
 {
-    state = state_;
-    switch (state) {
+    eg_state = state;
+    switch (eg_state) {
     case ATTACK:
         eg_phase_max = (patch.AR == 15) ? 0 : EG_DP_MAX;
         break;
@@ -161,7 +146,7 @@ void Slot::setEnvelopeState(EnvelopeState state_)
 
 bool Slot::isActive() const
 {
-    return state != FINISH;
+    return eg_state != FINISH;
 }
 
 // Slot key on
@@ -169,7 +154,7 @@ void Slot::slotOn()
 {
     setEnvelopeState(ATTACK);
     eg_phase = 0;
-    cPhase = 0;
+    pg_phase = 0;
 }
 
 // Slot key on, without resetting the phase
@@ -182,8 +167,8 @@ void Slot::slotOn2()
 // Slot key off
 void Slot::slotOff()
 {
-    if (state == FINISH) return; // already in off state
-    if (state == ATTACK) {
+    if (eg_state == FINISH) return; // already in off state
+    if (eg_state == ATTACK) {
         eg_phase = (arAdjustTab[eg_phase >> EP_FP_BITS /*.toInt()*/]) << EP_FP_BITS;
     }
     setEnvelopeState(RELEASE);
@@ -194,30 +179,35 @@ void Slot::slotOff()
 void Slot::setPatch(const Patch& newPatch)
 {
     patch = newPatch; // copy data
-    if ((state == SUSHOLD) && (patch.EG == 0)) {
+    if ((eg_state == SUSHOLD) && (patch.EG == 0)) {
         setEnvelopeState(SUSTAIN);
     }
-    setEnvelopeState(state); // recalculate eg_phase_max
+    setEnvelopeState(eg_state); // recalculate eg_phase_max
 }
 
 // Set new volume based on 4-bit register value (0-15).
 void Slot::setVolume(unsigned value)
 {
     // '<< 2' to transform 4 bits to the same range as the 6 bits TL field
-    volume = TL2EG(value << 2);
+    eg_volume = TL2EG(value << 2);
 }
 
 // PG
 unsigned Slot::calc_phase(unsigned lfo_pm)
 {
-    cPhase += dPhase[lfo_pm];
-    return cPhase >> DP_BASE_BITS;
+    uint16_t fnum = pg_freq & 511;
+    uint16_t block = pg_freq / 512;
+    unsigned tmp = ((2 * fnum + pmTable[fnum >> 6][lfo_pm]) * patch.ML) << block;
+    uint16_t dphase = tmp >> (21 - DP_BITS);
+
+    pg_phase += dphase;
+    return pg_phase >> DP_BASE_BITS;
 }
 
 // EG
 void Slot::calc_envelope_outline(unsigned& out)
 {
-    switch (state) {
+    switch (eg_state) {
     case ATTACK:
         out = 0;
         eg_phase = 0;
@@ -247,7 +237,7 @@ void Slot::calc_envelope_outline(unsigned& out)
 
 unsigned Slot::calc_envelope(bool HAS_AM, bool FIXED_ENV, int lfo_am, unsigned fixed_env)
 {
-    assert(!FIXED_ENV || (state == one_of(SUSHOLD, FINISH)));
+    assert(!FIXED_ENV || (eg_state == one_of(SUSHOLD, FINISH)));
 
     if (FIXED_ENV) {
         unsigned out = fixed_env;
@@ -262,14 +252,14 @@ unsigned Slot::calc_envelope(bool HAS_AM, bool FIXED_ENV, int lfo_am, unsigned f
     }
     else {
         unsigned out = eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128]
-        if (state == ATTACK) {
+        if (eg_state == ATTACK) {
             out = arAdjustTab[out]; // [0, 128]
         }
         eg_phase += eg_dPhase;
         if (eg_phase >= eg_phase_max) {
             calc_envelope_outline(out);
         }
-        out = EG2DB(out + tll); // [0, 732]
+        out = EG2DB(out + eg_tll); // [0, 732]
         if (HAS_AM) {
             out += lfo_am; // [0, 758]
         }
@@ -279,10 +269,10 @@ unsigned Slot::calc_envelope(bool HAS_AM, bool FIXED_ENV, int lfo_am, unsigned f
 
 unsigned Slot::calc_fixed_env(bool HAS_AM) const
 {
-    assert(state == one_of(SUSHOLD, FINISH));
+    assert(eg_state == one_of(SUSHOLD, FINISH));
     assert(eg_dPhase == 0);
     unsigned out = eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128)
-    out = EG2DB(out + tll); // [0, 480)
+    out = EG2DB(out + eg_tll); // [0, 480)
     if (!HAS_AM) {
         out |= 3;
     }

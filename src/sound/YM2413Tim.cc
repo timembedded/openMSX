@@ -327,9 +327,9 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
     for (auto i : xrange(isRhythm() ? 6 : 9)) {
         Channel& ch = channels[i];
         if (ch.car.isActive()) {
-            bool carFixedEnv = ch.car.state == one_of(SUSHOLD, FINISH);
-            bool modFixedEnv = ch.mod.state == one_of(SUSHOLD, FINISH);
-            if (ch.car.state == SETTLE) {
+            bool carFixedEnv = ch.car.eg_state == one_of(SUSHOLD, FINISH);
+            bool modFixedEnv = ch.mod.eg_state == one_of(SUSHOLD, FINISH);
+            if (ch.car.eg_state == SETTLE) {
                 modFixedEnv = false;
             }
             unsigned flags = (ch.car.patch.AMPM << 0) |
@@ -357,8 +357,8 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
         Channel& ch8 = channels[8];
 
         unsigned old_noise = noise_seed;
-        unsigned old_cPhase7 = ch7.mod.cPhase;
-        unsigned old_cPhase8 = ch8.car.cPhase;
+        unsigned old_cPhase7 = ch7.mod.pg_phase;
+        unsigned old_cPhase8 = ch8.car.pg_phase;
 
         if (ch6.car.isActive()) {
             for (auto sample : xrange(num)) {
@@ -400,8 +400,8 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
         if (ch7.mod.isActive()) {
             // restore noise, ch7/8 cPhase
             noise_seed = old_noise;
-            ch7.mod.cPhase = old_cPhase7;
-            ch8.car.cPhase = old_cPhase8;
+            ch7.mod.pg_phase = old_cPhase7;
+            ch8.car.pg_phase = old_cPhase8;
             for (auto sample : xrange(num)) {
                 noise_seed >>= 1;
                 bool noise_bit = noise_seed & 1;
@@ -569,7 +569,7 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 ch.mod.updateEG();
-                if (ch.mod.state == ATTACK) {
+                if (ch.mod.eg_state == ATTACK) {
                     ch.mod.setEnvelopeState(ATTACK);
                 }
             }
@@ -582,7 +582,7 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 ch.car.updateEG();
-                if (ch.car.state == ATTACK) {
+                if (ch.car.eg_state == ATTACK) {
                     ch.car.setEnvelopeState(ATTACK);
                 }
             }
@@ -595,7 +595,7 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 ch.mod.updateEG();
-                if (ch.mod.state == DECAY) {
+                if (ch.mod.eg_state == DECAY) {
                     ch.mod.setEnvelopeState(DECAY);
                 }
             }
@@ -608,7 +608,7 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
                 Channel& ch = channels[i];
                 ch.setPatch(getPatch(0, false), getPatch(0, true)); // TODO optimize
                 ch.car.updateEG();
-                if (ch.car.state == DECAY) {
+                if (ch.car.eg_state == DECAY) {
                     ch.car.setEnvelopeState(DECAY);
                 }
             }
@@ -720,8 +720,8 @@ namespace YM2413Tim {
     {
         ar.serialize("feedback", feedback,
             "output", output,
-            "cphase", cPhase,
-            "state", state,
+            "cphase", pg_phase,
+            "state", eg_state,
             "eg_phase", eg_phase,
             "sustain", sustain);
 
@@ -785,8 +785,8 @@ namespace YM2413Tim {
                 uint16_t freq = getFreq(unsigned(i));
                 ch.mod.updateAll(freq, actAsCarrier);
                 ch.car.updateAll(freq, true);
-                ch.mod.setEnvelopeState(ch.mod.state);
-                ch.car.setEnvelopeState(ch.car.state);
+                ch.mod.setEnvelopeState(ch.mod.eg_state);
+                ch.car.setEnvelopeState(ch.car.eg_state);
             }
             update_key_status();
         }

@@ -231,7 +231,7 @@ static constexpr std::array<std::span<const uint16_t, PG_WIDTH>, 2> waveform = {
     fullSinTable, halfSinTable
 };
 
-static constexpr std::array<std::array<int32_t, 16>, 16> dPhaseDrTab = { {
+static constexpr std::array<std::array<int32_t, 16>, 16> dPhaseDrTab = { { // values converted to EnvPhaseIndex
 {
     0, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536
 },{
