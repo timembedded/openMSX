@@ -56,13 +56,9 @@ void Channel::keyOn()
     //      Should we    set    mod.slot_on_flag?
     //      Can make a difference for channel 7/8 in rythm mode.
     slot.select(car);
-    if (!slot.sd->slot_on_flag) {
-        slot.setEnvelopeState(SETTLE);
-        // this will shortly set both car and mod to ATTACK state
-    }
-    slot.sd->slot_on_flag |= 1;
+    slot.slotOnVoice(true);
     slot.select(mod);
-    slot.sd->slot_on_flag |= 1;
+    slot.slotOnVoice(false);
 }
 
 // Channel key off
@@ -70,15 +66,9 @@ void Channel::keyOff()
 {
     // Note: no mod.slotOff() in original code!!!
     slot.select(car);
-    if (slot.sd->slot_on_flag) {
-        slot.sd->slot_on_flag &= ~1;
-        slot.select(mod);
-        slot.sd->slot_on_flag &= ~1;
-        slot.select(car);
-        if (!slot.sd->slot_on_flag) {
-            slot.slotOff();
-        }
-    }
+    slot.slotOffVoice();
+    slot.select(mod);
+    slot.slotOffVoice();
 }
 
 } // namespace YM2413Tim

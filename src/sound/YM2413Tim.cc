@@ -91,107 +91,6 @@ void YM2413::reset()
     registerLatch = 0;
 }
 
-// Drum key on
-void YM2413::keyOn_BD()
-{
-    slot.select(channels[6].car);
-    if (!slot.sd->slot_on_flag) {
-        slot.setEnvelopeState(SETTLE);
-        // this will shortly set both car and mod to ATTACK state
-    }
-    slot.sd->slot_on_flag |= 2;
-    slot.select(channels[6].mod);
-    slot.sd->slot_on_flag |= 2;
-}
-void YM2413::keyOn_HH()
-{
-    // TODO do these also use the SETTLE stuff?
-    slot.select(channels[7].mod);
-    if (!slot.sd->slot_on_flag) {
-        slot.slotOn2();
-    }
-    slot.sd->slot_on_flag |= 2;
-}
-void YM2413::keyOn_SD()
-{
-    slot.select(channels[7].car);
-    if (!slot.sd->slot_on_flag) {
-        slot.slotOn();
-    }
-    slot.sd->slot_on_flag |= 2;
-}
-void YM2413::keyOn_TOM()
-{
-    slot.select(channels[8].mod);
-    if (!slot.sd->slot_on_flag) {
-        slot.slotOn();
-    }
-    slot.sd->slot_on_flag |= 2;
-}
-void YM2413::keyOn_CYM()
-{
-    slot.select(channels[8].car);
-    if (!slot.sd->slot_on_flag) {
-        slot.slotOn2();
-    }
-    slot.sd->slot_on_flag |= 2;
-}
-
-// Drum key off
-void YM2413::keyOff_BD()
-{
-    slot.select(channels[6].car);
-    if (slot.sd->slot_on_flag) {
-        slot.sd->slot_on_flag &= ~2;
-        slot.select(channels[6].mod);
-        slot.sd->slot_on_flag &= ~2;
-        slot.select(channels[6].car);
-        if (!slot.sd->slot_on_flag) {
-            slot.slotOff();
-        }
-    }
-}
-void YM2413::keyOff_HH()
-{
-    slot.select(channels[7].mod);
-    if (slot.sd->slot_on_flag) {
-        slot.sd->slot_on_flag &= ~2;
-        if (!slot.sd->slot_on_flag) {
-            slot.slotOff();
-        }
-    }
-}
-void YM2413::keyOff_SD()
-{
-    slot.select(channels[7].car);
-    if (slot.sd->slot_on_flag) {
-        slot.sd->slot_on_flag &= ~2;
-        if (!slot.sd->slot_on_flag) {
-            slot.slotOff();
-        }
-    }
-}
-void YM2413::keyOff_TOM()
-{
-    slot.select(channels[8].mod);
-    if (slot.sd->slot_on_flag) {
-        slot.sd->slot_on_flag &= ~2;
-        if (!slot.sd->slot_on_flag) {
-            slot.slotOff();
-        }
-    }
-}
-void YM2413::keyOff_CYM()
-{
-    slot.select(channels[8].car);
-    if (slot.sd->slot_on_flag) {
-        slot.sd->slot_on_flag &= ~2;
-        if (!slot.sd->slot_on_flag) {
-            slot.slotOff();
-        }
-    }
-}
-
 void YM2413::setRhythmFlags(uint8_t old)
 {
     Channel& ch6 = channels[6];
@@ -205,30 +104,77 @@ void YM2413::setRhythmFlags(uint8_t old)
             // OFF -> ON
             ch6.setPatch(getPatch(16, false), getPatch(16, true));
             ch7.setPatch(getPatch(17, false), getPatch(17, true));
+            ch8.setPatch(getPatch(18, false), getPatch(18, true));
+
             slot.select(ch7.mod);
             slot.setVolume(reg_patch[7]);
-            ch8.setPatch(getPatch(18, false), getPatch(18, true));
             slot.select(ch8.mod);
             slot.setVolume(reg_patch[8]);
         }
         else {
             // ON -> OFF
             ch6.setPatch(getPatch(reg_patch[6], false), getPatch(reg_patch[6], true));
-            keyOff_BD();
             ch7.setPatch(getPatch(reg_patch[7], false), getPatch(reg_patch[7], true));
-            keyOff_SD();
-            keyOff_HH();
             ch8.setPatch(getPatch(reg_patch[8], false), getPatch(reg_patch[8], true));
-            keyOff_TOM();
-            keyOff_CYM();
+            // All keyOff
+            flags = 0x20;
         }
     }
     if (flags & 0x20) {
-        if (flags & 0x10) keyOn_BD();  else keyOff_BD();
-        if (flags & 0x08) keyOn_SD();  else keyOff_SD();
-        if (flags & 0x04) keyOn_TOM(); else keyOff_TOM();
-        if (flags & 0x02) keyOn_CYM(); else keyOff_CYM();
-        if (flags & 0x01) keyOn_HH();  else keyOff_HH();
+        if (flags & 0x10) {
+            // keyOff_BD
+            slot.select(channels[6].car);
+            slot.slotOnRythm(false, true, false); // this will shortly set both car and mod to ATTACK state
+            slot.select(channels[6].mod);
+            slot.slotOnRythm(false, false, false);
+        }else{
+            // keyOff_BD
+            slot.select(channels[6].car);
+            slot.slotOffRythm();
+            slot.select(channels[6].mod);
+            slot.slotOffRythm();
+        }
+        if (flags & 0x08) {
+            // keyOn_SD
+            slot.select(channels[7].car);
+            slot.slotOnRythm(true, false, true);
+            slot.slotOnRythm(false, false, false);
+        }else{
+            // keyOff_SD
+            slot.select(channels[7].car);
+            slot.slotOffRythm();
+        }
+        if (flags & 0x04) {
+            // keyOn_TOM
+            slot.select(channels[8].mod);
+            slot.slotOnRythm(true, false, true);
+            slot.slotOnRythm(false, false, false);
+        }else{
+            // keyOff_TOM
+            slot.select(channels[8].mod);
+            slot.slotOffRythm();
+        }
+        if (flags & 0x02) {
+            // keyOn_CYM
+            slot.select(channels[8].car);
+            slot.slotOnRythm(true, false, false);
+            slot.slotOnRythm(false, false, false);
+        }else{
+            // keyOff_CYM
+            slot.select(channels[8].car);
+            slot.slotOffRythm();
+        }
+        if (flags & 0x01) {
+            // keyOn_HH
+            // TODO do these also use the SETTLE stuff?
+            slot.select(channels[7].mod);
+            slot.slotOnRythm(true, false, false);
+            slot.slotOnRythm(false, false, false);
+        }else{
+            // keyOff_HH
+            slot.select(channels[7].mod);
+            slot.slotOffRythm();
+        }
     }
 
     uint16_t freq6 = getFreq(6);
@@ -251,28 +197,40 @@ void YM2413::setRhythmFlags(uint8_t old)
 void YM2413::update_key_status()
 {
     for (auto [i, ch] : enumerate(channels)) {
-        uint8_t slot_on = reg_key[i] ? 1 : 0;
-        slot.select(ch.mod);
-        slot.sd->slot_on_flag = slot_on;
-        slot.select(ch.car);
-        slot.sd->slot_on_flag = slot_on;
+        if (reg_key[i]) {
+            ch.keyOn();
+        }else{
+            ch.keyOff();
+        }
     }
     if (isRhythm()) {
         Channel& ch6 = channels[6];
         slot.select(ch6.mod);
-        slot.sd->slot_on_flag |= uint8_t((reg_flags & 0x10) ? 2 : 0); // BD1
+        if (reg_flags & 0x10) { // BD1
+            slot.slotOnRythm(false, false, false);
+        }
         slot.select(ch6.car);
-        slot.sd->slot_on_flag |= uint8_t((reg_flags & 0x10) ? 2 : 0); // BD2
+        if (reg_flags & 0x10) { // BD2
+            slot.slotOnRythm(false, false, false);
+        }
         Channel& ch7 = channels[7];
         slot.select(ch7.mod);
-        slot.sd->slot_on_flag |= uint8_t((reg_flags & 0x01) ? 2 : 0); // HH
+        if (reg_flags & 0x01) { // HH
+            slot.slotOnRythm(false, false, false);
+        }
         slot.select(ch7.car);
-        slot.sd->slot_on_flag |= uint8_t((reg_flags & 0x08) ? 2 : 0); // SD
+        if (reg_flags & 0x08) { // SD
+            slot.slotOnRythm(false, false, false);
+        }
         Channel& ch8 = channels[8];
         slot.select(ch8.mod);
-        slot.sd->slot_on_flag |= uint8_t((reg_flags & 0x04) ? 2 : 0); // TOM
+        if (reg_flags & 0x04) { // TOM
+            slot.slotOnRythm(false, false, false);
+        }
         slot.select(ch8.car);
-        slot.sd->slot_on_flag |= uint8_t((reg_flags & 0x02) ? 2 : 0); // CYM
+        if (reg_flags & 0x02) { // CYM
+            slot.slotOnRythm(false, false, false);
+        }
     }
 }
 

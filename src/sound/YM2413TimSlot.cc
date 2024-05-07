@@ -43,12 +43,14 @@ void Slot::reset()
     sd->eg_tll = 0;
     sd->sustain = false;
     sd->eg_volume = TL2EG(0);
-    sd->slot_on_flag = 0;
+    sd->slot_on_voice = false;
+    sd->slot_on_drum = false;
     sd->eg_rks = 0;
 }
 
 void Slot::select(int num)
 {
+    assert(num < (int)(sizeof(slotData)/sizeof(slotData[0])));
     sd = &slotData[num];
     patch.select(sd->patch);
 }
@@ -158,31 +160,57 @@ bool Slot::isActive() const
     return sd->eg_state != FINISH;
 }
 
-// Slot key on
-void Slot::slotOn()
+// Slot key on/off for normal voices
+void Slot::slotOnVoice(bool settle)
 {
-    setEnvelopeState(ATTACK);
-    sd->eg_phase = 0;
-    sd->pg_phase = 0;
-}
-
-// Slot key on, without resetting the phase
-void Slot::slotOn2()
-{
-    setEnvelopeState(ATTACK);
-    sd->eg_phase = 0;
-}
-
-// Slot key off
-void Slot::slotOff()
-{
-    if (sd->eg_state == FINISH) return; // already in off state
-    if (sd->eg_state == ATTACK) {
-        sd->eg_phase = (arAdjustTab[sd->eg_phase >> EP_FP_BITS /*.toInt()*/]) << EP_FP_BITS;
+    if (!sd->slot_on_drum && !sd->slot_on_voice) {
+        if (settle) {
+            setEnvelopeState(SETTLE);
+            // this will shortly set both car and mod to ATTACK state
+        }
     }
-    setEnvelopeState(RELEASE);
+    sd->slot_on_voice = true;
+}
+void Slot::slotOffVoice()
+{
+    sd->slot_on_voice = false;
+    if (!sd->slot_on_drum && sd->eg_state != FINISH /* not already in off state */) {
+        // TODO: Why is this? Ignore for now
+        //if (sd->eg_state == ATTACK) {
+        //    sd->eg_phase = (arAdjustTab[sd->eg_phase >> EP_FP_BITS /*.toInt()*/]) << EP_FP_BITS;
+        //}
+        setEnvelopeState(RELEASE);
+    }
 }
 
+// Slot key on/off for drums
+void Slot::slotOnRythm(bool attack, bool settle, bool reset_phase)
+{
+    if (!sd->slot_on_drum && !sd->slot_on_voice) {
+        if (attack) {
+            setEnvelopeState(ATTACK);
+            sd->eg_phase = 0;
+        }
+        if (reset_phase) {
+            sd->pg_phase = 0;
+        }
+        if (settle) {
+            setEnvelopeState(SETTLE);
+        }
+    }
+    sd->slot_on_drum = true;
+}
+void Slot::slotOffRythm()
+{
+    sd->slot_on_drum = false;
+    if (!sd->slot_on_voice && sd->eg_state != FINISH /* not already in off state */) {
+        // TODO: Why is this? Ignore for now
+        //if (sd->eg_state == ATTACK) {
+        //    sd->eg_phase = (arAdjustTab[sd->eg_phase >> EP_FP_BITS /*.toInt()*/]) << EP_FP_BITS;
+        //}
+        setEnvelopeState(RELEASE);
+    }
+}
 
 // Change a rhythm voice
 void Slot::setPatch(int voice)
@@ -235,12 +263,16 @@ void Slot::calc_envelope_outline(unsigned& out)
         // Comment copied from Burczynski code (didn't verify myself):
         //   When CARRIER envelope gets down to zero level, phases in
         //   BOTH operators are reset (at the same time?).
-        slotOn();
+        setEnvelopeState(ATTACK);
+        sd->eg_phase = 0;
+        sd->pg_phase = 0;
         assert (sd->sibling != -1);
         if (sd->sibling != -1) {
             SlotData *sdsave = sd;
             select(sd->sibling);
-            slotOn();
+            setEnvelopeState(ATTACK);
+            sd->eg_phase = 0;
+            sd->pg_phase = 0;
             sd = sdsave;
         }
         break;

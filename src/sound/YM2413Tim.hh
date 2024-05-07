@@ -29,16 +29,6 @@ private:
     void writeReg(uint8_t r, uint8_t data);
     void writePatchReg(uint8_t r, uint8_t data);
 
-    void keyOn_BD();
-    void keyOn_SD();
-    void keyOn_TOM();
-    void keyOn_HH();
-    void keyOn_CYM();
-    void keyOff_BD();
-    void keyOff_SD();
-    void keyOff_TOM();
-    void keyOff_HH();
-    void keyOff_CYM();
     void setRhythmFlags(uint8_t old);
     void update_key_status();
     bool isRhythm() const;

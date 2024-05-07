@@ -23,6 +23,7 @@ Patch::Patch()
 
 void Patch::select(int voice)
 {
+    assert(voice < (int)(sizeof(patchData)/sizeof(patchData[0])));
     pd = &patchData[voice];
 }
 

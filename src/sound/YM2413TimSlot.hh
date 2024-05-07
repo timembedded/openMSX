@@ -29,9 +29,11 @@ public:
     void setEnvelopeState(EnvelopeState state);
     bool isActive() const;
 
-    void slotOn();
-    void slotOn2();
-    void slotOff();
+    void slotOnVoice(bool settle);
+    void slotOnRythm(bool attack, bool settle, bool reset_phase);
+    void slotOffRythm();
+    void slotOffVoice();
+
     void setPatch(int voice);
     void setVolume(unsigned value);
 
@@ -75,7 +77,8 @@ public:
         EnvPhaseIndex eg_dPhase;     // Phase increment amount
         EnvPhaseIndex eg_phase_max;
 
-        uint8_t slot_on_flag;
+        bool slot_on_voice;
+        bool slot_on_drum;
         bool sustain;                // Sustain
 
         int sibling; // pointer to sibling slot (only valid for car -> mod)
