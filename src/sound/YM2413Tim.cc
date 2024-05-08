@@ -96,102 +96,109 @@ void YM2413::setRhythmFlags(uint8_t old)
     Channel& ch6 = channels[6];
     Channel& ch7 = channels[7];
     Channel& ch8 = channels[8];
+    bool turn_rhythm_on = false;
+    bool turn_rhythm_off = false;
+    bool key_bd = false;
+    bool key_sd = false;
+    bool key_tom = false;
+    bool key_cym = false;
+    bool key_hh = false;
 
     // flags = X | X | mode | BD | SD | TOM | TC | HH
     uint8_t flags = reg_flags;
     if ((flags ^ old) & 0x20) {
         if (flags & 0x20) {
             // OFF -> ON
-            ch6.setPatch(getPatch(16, false), getPatch(16, true));
-            ch7.setPatch(getPatch(17, false), getPatch(17, true));
-            ch8.setPatch(getPatch(18, false), getPatch(18, true));
-
-            slot.select(ch7.mod);
-            slot.setVolume(reg_patch[7]);
-            slot.select(ch8.mod);
-            slot.setVolume(reg_patch[8]);
+            turn_rhythm_on = true;
         }
         else {
             // ON -> OFF
-            ch6.setPatch(getPatch(reg_patch[6], false), getPatch(reg_patch[6], true));
-            ch7.setPatch(getPatch(reg_patch[7], false), getPatch(reg_patch[7], true));
-            ch8.setPatch(getPatch(reg_patch[8], false), getPatch(reg_patch[8], true));
-            // All keyOff
-            flags = 0x20;
+            turn_rhythm_off = true;
         }
     }
     if (flags & 0x20) {
-        if (flags & 0x10) {
-            // keyOff_BD
-            slot.select(channels[6].car);
-            slot.slotOnRythm(false, true, false); // this will shortly set both car and mod to ATTACK state
-            slot.select(channels[6].mod);
-            slot.slotOnRythm(false, false, false);
-        }else{
-            // keyOff_BD
-            slot.select(channels[6].car);
-            slot.slotOffRythm();
-            slot.select(channels[6].mod);
-            slot.slotOffRythm();
-        }
-        if (flags & 0x08) {
-            // keyOn_SD
-            slot.select(channels[7].car);
-            slot.slotOnRythm(true, false, true);
-            slot.slotOnRythm(false, false, false);
-        }else{
-            // keyOff_SD
-            slot.select(channels[7].car);
-            slot.slotOffRythm();
-        }
-        if (flags & 0x04) {
-            // keyOn_TOM
-            slot.select(channels[8].mod);
-            slot.slotOnRythm(true, false, true);
-            slot.slotOnRythm(false, false, false);
-        }else{
-            // keyOff_TOM
-            slot.select(channels[8].mod);
-            slot.slotOffRythm();
-        }
-        if (flags & 0x02) {
-            // keyOn_CYM
-            slot.select(channels[8].car);
-            slot.slotOnRythm(true, false, false);
-            slot.slotOnRythm(false, false, false);
-        }else{
-            // keyOff_CYM
-            slot.select(channels[8].car);
-            slot.slotOffRythm();
-        }
-        if (flags & 0x01) {
-            // keyOn_HH
-            // TODO do these also use the SETTLE stuff?
-            slot.select(channels[7].mod);
-            slot.slotOnRythm(true, false, false);
-            slot.slotOnRythm(false, false, false);
-        }else{
-            // keyOff_HH
-            slot.select(channels[7].mod);
-            slot.slotOffRythm();
-        }
+        key_bd = (flags & 0x10);
+        key_sd = (flags & 0x08);
+        key_tom = (flags & 0x04);
+        key_cym = (flags & 0x02);
+        key_hh = (flags & 0x01);
     }
 
+    // CH6 - key BD
+    if (turn_rhythm_on) {
+        ch6.setPatch(getPatch(16, false), getPatch(16, true));
+    }
+    if (turn_rhythm_off) {
+        ch6.setPatch(getPatch(reg_patch[6], false), getPatch(reg_patch[6], true));
+    }
     uint16_t freq6 = getFreq(6);
-    slot.select(ch6.mod);
-    slot.updateAll(freq6, false);
-    slot.select(ch6.car);
+    slot.select(channels[6].car);
     slot.updateAll(freq6, true);
+    if (key_bd) {
+        slot.slotOnRhythm(false, true, false); // this will shortly set both car and mod to ATTACK state
+    }else{
+        slot.slotOffRhythm();
+    }
+    slot.select(channels[6].mod);
+    slot.updateAll(freq6, false);
+    if (key_bd) {
+        slot.slotOnRhythm(false, false, false);
+    }else{
+        slot.slotOffRhythm();
+    }
+
+    // CH7 - key SD+HH
+    if (turn_rhythm_on) {
+        ch7.setPatch(getPatch(17, false), getPatch(17, true));
+    }
+    if (turn_rhythm_off) {
+        ch7.setPatch(getPatch(reg_patch[7], false), getPatch(reg_patch[7], true));
+    }
     uint16_t freq7 = getFreq(7);
-    slot.select(ch7.mod);
-    slot.updateAll(freq7, isRhythm());
-    slot.select(ch7.car);
+    slot.select(channels[7].car);
     slot.updateAll(freq7, true);
+    if (key_sd) {
+        slot.slotOnRhythm(true, false, true);
+    }else{
+        slot.slotOffRhythm();
+    }
+    slot.select(channels[7].mod);
+    slot.updateAll(freq7, isRhythm());
+    if (turn_rhythm_on) {
+        slot.setVolume(reg_patch[7]);
+    }
+    if (key_hh) {
+        // TODO do these also use the SETTLE stuff?
+        slot.slotOnRhythm(true, false, false);
+    }else{
+        slot.slotOffRhythm();
+    }
+
+    // CH8 - key CYM+TOM
+    if (turn_rhythm_on) {
+        ch8.setPatch(getPatch(18, false), getPatch(18, true));
+    }
+    if (turn_rhythm_off) {
+        ch8.setPatch(getPatch(reg_patch[8], false), getPatch(reg_patch[8], true));
+    }
     uint16_t freq8 = getFreq(8);
-    slot.select(ch8.mod);
-    slot.updateAll(freq8, isRhythm());
-    slot.select(ch8.car);
+    slot.select(channels[8].car);
     slot.updateAll(freq8, true);
+    if (key_cym) {
+        slot.slotOnRhythm(true, false, false);
+    }else{
+        slot.slotOffRhythm();
+    }
+    slot.select(channels[8].mod);
+    slot.updateAll(freq8, isRhythm());
+    if (turn_rhythm_on) {
+        slot.setVolume(reg_patch[8]);
+    }
+    if (key_tom) {
+        slot.slotOnRhythm(true, false, true);
+    }else{
+        slot.slotOffRhythm();
+    }
 }
 
 void YM2413::update_key_status()
@@ -207,29 +214,29 @@ void YM2413::update_key_status()
         Channel& ch6 = channels[6];
         slot.select(ch6.mod);
         if (reg_flags & 0x10) { // BD1
-            slot.slotOnRythm(false, false, false);
+            slot.slotOnRhythm(false, false, false);
         }
         slot.select(ch6.car);
         if (reg_flags & 0x10) { // BD2
-            slot.slotOnRythm(false, false, false);
+            slot.slotOnRhythm(false, false, false);
         }
         Channel& ch7 = channels[7];
         slot.select(ch7.mod);
         if (reg_flags & 0x01) { // HH
-            slot.slotOnRythm(false, false, false);
+            slot.slotOnRhythm(false, false, false);
         }
         slot.select(ch7.car);
         if (reg_flags & 0x08) { // SD
-            slot.slotOnRythm(false, false, false);
+            slot.slotOnRhythm(false, false, false);
         }
         Channel& ch8 = channels[8];
         slot.select(ch8.mod);
         if (reg_flags & 0x04) { // TOM
-            slot.slotOnRythm(false, false, false);
+            slot.slotOnRhythm(false, false, false);
         }
         slot.select(ch8.car);
         if (reg_flags & 0x02) { // CYM
-            slot.slotOnRythm(false, false, false);
+            slot.slotOnRhythm(false, false, false);
         }
     }
 }
@@ -267,23 +274,22 @@ void YM2413::calcChannel(Channel& ch, uint8_t FLAGS, std::span<float> buf)
     const bool HAS_CAR_FIXED_ENV = (FLAGS & 32) != 0;
     const bool HAS_MOD_FIXED_ENV = (FLAGS & 64) != 0;
 
-    slot.select(ch.car);
-    assert(((slot.patch.pd->AMPM & 1) != 0) == HAS_CAR_PM);
-    assert(((slot.patch.pd->AMPM & 2) != 0) == HAS_CAR_AM);
-    slot.select(ch.mod);
-    assert(((slot.patch.pd->AMPM & 1) != 0) == HAS_MOD_PM);
-    assert(((slot.patch.pd->AMPM & 2) != 0) == HAS_MOD_AM);
-
     unsigned tmp_pm_phase = pm_phase;
     unsigned tmp_am_phase = am_phase;
     unsigned car_fixed_env = 0; // dummy
     unsigned mod_fixed_env = 0; // dummy
+
+    slot.select(ch.car);
+    assert(((slot.patch.pd->AMPM & 1) != 0) == HAS_CAR_PM);
+    assert(((slot.patch.pd->AMPM & 2) != 0) == HAS_CAR_AM);
     if (HAS_CAR_FIXED_ENV) {
-        slot.select(ch.car);
         car_fixed_env = slot.calc_fixed_env(HAS_CAR_AM);
     }
+
+    slot.select(ch.mod);
+    assert(((slot.patch.pd->AMPM & 1) != 0) == HAS_MOD_PM);
+    assert(((slot.patch.pd->AMPM & 2) != 0) == HAS_MOD_AM);
     if (HAS_MOD_FIXED_ENV) {
-        slot.select(ch.mod);
         mod_fixed_env = slot.calc_fixed_env(HAS_MOD_AM);
     }
 
@@ -323,19 +329,17 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
         slot.select(ch.car);
         if (slot.isActive()) {
             bool carFixedEnv = slot.sd->eg_state == one_of(SUSHOLD, FINISH);
+            bool carSettle = slot.sd->eg_state == SETTLE;
+            uint8_t carAMPM = slot.patch.pd->AMPM;
             slot.select(ch.mod);
-            bool modFixedEnv = slot.sd->eg_state == one_of(SUSHOLD, FINISH);
-            slot.select(ch.car);
-            if (slot.sd->eg_state == SETTLE) {
-                modFixedEnv = false;
-            }
-            unsigned flags = (slot.patch.pd->AMPM << 0);
-            slot.select(ch.mod);
-            flags |=
-                (slot.patch.pd->AMPM << 2) |
-                ((slot.patch.pd->FB != 0) << 4) |
-                (carFixedEnv << 5) |
-                (modFixedEnv << 6);
+            bool modFixedEnv = carSettle? false : slot.sd->eg_state == one_of(SUSHOLD, FINISH);
+            uint8_t modAMPM = slot.patch.pd->AMPM;
+            uint8_t modFB = slot.patch.pd->FB;
+            unsigned flags = (carAMPM << 0) |
+                             (modAMPM << 2) |
+                             ((modFB != 0) << 4) |
+                             (carFixedEnv << 5) |
+                             (modFixedEnv << 6);
             calcChannel(ch, flags, { bufs[i], num });
         }
         else {
@@ -355,88 +359,92 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
         Channel& ch7 = channels[7];
         Channel& ch8 = channels[8];
 
-        unsigned old_noise = noise_seed;
-        slot.select(ch7.mod);
-        unsigned old_cPhase7 = slot.sd->pg_phase;
-        slot.select(ch8.car);
-        unsigned old_cPhase8 = slot.sd->pg_phase;
-
         slot.select(ch6.car);
-        if (slot.isActive()) {
-            for (auto sample : xrange(num)) {
+        bool ch6_car_active = slot.isActive();
+        if (!ch6_car_active) {
+            bufs[9] = nullptr;
+        }
+        slot.select(ch7.car);
+        bool ch7_car_active = slot.isActive();
+        if (!ch7_car_active) {
+            bufs[10] = nullptr;
+        }
+        slot.select(ch8.car);
+        bool ch8_car_active = slot.isActive();
+        if (!ch8_car_active) {
+            bufs[11] = nullptr;
+        }
+        slot.select(ch7.mod);
+        bool ch7_mod_active = slot.isActive();
+        if (!ch7_mod_active) {
+            bufs[12] = nullptr;
+        }
+        slot.select(ch8.mod);
+        bool ch8_mod_active = slot.isActive();
+        if (!ch8_mod_active) {
+            bufs[13] = nullptr;
+        }
+
+        for (auto sample : xrange(num)) {
+            // BD
+            if (ch6_car_active) {
                 slot.select(ch6.mod);
                 int calc_mod = slot.calc_slot_mod(false, false, false, 0, 0, 0);
                 slot.select(ch6.car);
                 int calc_car = slot.calc_slot_car(false, false, 0, 0, calc_mod, 0);
                 bufs[9][sample] += narrow_cast<float>(2 * calc_car);
             }
-        }
-        else {
-            bufs[9] = nullptr;
-        }
 
-        slot.select(ch7.car);
-        if (slot.isActive()) {
-            for (auto sample : xrange(num)) {
+            // SD
+            bool got_noise = false;
+            bool noise_bit = false;
+            if (ch7_car_active) {
                 noise_seed >>= 1;
-                bool noise_bit = noise_seed & 1;
+                noise_bit = noise_seed & 1;
                 if (noise_bit) noise_seed ^= 0x8003020;
+                got_noise = true;
+                slot.select(ch7.car);
                 bufs[10][sample] += narrow_cast<float>(
                     -2 * slot.calc_slot_snare(noise_bit));
             }
-        }
-        else {
-            bufs[10] = nullptr;
-        }
 
-        slot.select(ch8.car);
-        if (slot.isActive()) {
-            for (auto sample : xrange(num)) {
+            // CYM
+            bool got_ch7mod_ch8car = false;
+            unsigned phase7 = 0, phase8 = 0;
+            if (ch8_car_active) {
                 slot.select(ch7.mod);
-                unsigned phase7 = slot.calc_phase(0);
+                phase7 = slot.calc_phase(0);
                 slot.select(ch8.car);
-                unsigned phase8 = slot.calc_phase(0);
+                phase8 = slot.calc_phase(0);
+                got_ch7mod_ch8car = true;
                 bufs[11][sample] += narrow_cast<float>(
                     -2 * slot.calc_slot_cym(phase7, phase8));
             }
-        }
-        else {
-            bufs[11] = nullptr;
-        }
 
-        slot.select(ch7.mod);
-        if (slot.isActive()) {
-            // restore noise, ch7/8 cPhase
-            noise_seed = old_noise;
-            slot.sd->pg_phase = old_cPhase7;
-            slot.select(ch8.car);
-            slot.sd->pg_phase = old_cPhase8;
-            slot.select(ch7.mod);
-            for (auto sample : xrange(num)) {
-                noise_seed >>= 1;
-                bool noise_bit = noise_seed & 1;
-                if (noise_bit) noise_seed ^= 0x8003020;
-                unsigned phase7 = slot.calc_phase(0);
-                slot.select(ch8.car);
-                unsigned phase8 = slot.calc_phase(0);
+            // HH
+            if (ch7_mod_active) {
+                if (!got_noise) {
+                    noise_seed >>= 1;
+                    noise_bit = noise_seed & 1;
+                    if (noise_bit) noise_seed ^= 0x8003020;
+                }
+                if (!got_ch7mod_ch8car) {
+                    slot.select(ch7.mod);
+                    phase7 = slot.calc_phase(0);
+                    slot.select(ch8.car);
+                    phase8 = slot.calc_phase(0);
+                }
                 slot.select(ch7.mod);
                 bufs[12][sample] += narrow_cast<float>(
                     2 * slot.calc_slot_hat(phase7, phase8, noise_bit));
             }
-        }
-        else {
-            bufs[12] = nullptr;
-        }
 
-        slot.select(ch8.mod);
-        if (slot.isActive()) {
-            for (auto sample : xrange(num)) {
+            // TOM
+            if (ch8_mod_active) {
+                slot.select(ch8.mod);
                 bufs[13][sample] += narrow_cast<float>(
                     2 * slot.calc_slot_tom());
             }
-        }
-        else {
-            bufs[13] = nullptr;
         }
     }
     else {
@@ -704,7 +712,7 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         Channel& ch = channels[cha];
         if (isRhythm() && (cha >= 6)) {
             if (cha > 6) {
-                // channel 7 or 8 in rythm mode
+                // channel 7 or 8 in rhythm mode
                 slot.select(ch.mod);
                 slot.setVolume(data >> 4);
             }
@@ -818,7 +826,7 @@ namespace YM2413Tim {
                 // restore volume
                 slot.select(ch.car);
                 slot.setVolume(reg_volume[i]);
-                if (isRhythm() && (i >= 7)) { // ch 7/8 rythm
+                if (isRhythm() && (i >= 7)) { // ch 7/8 rhythm
                     slot.select(ch.mod);
                     slot.setVolume(reg_patch[i]);
                 }

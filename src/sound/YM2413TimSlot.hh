@@ -30,8 +30,8 @@ public:
     bool isActive() const;
 
     void slotOnVoice(bool settle);
-    void slotOnRythm(bool attack, bool settle, bool reset_phase);
-    void slotOffRythm();
+    void slotOnRhythm(bool attack, bool settle, bool reset_phase);
+    void slotOffRhythm();
     void slotOffVoice();
 
     void setPatch(int voice);

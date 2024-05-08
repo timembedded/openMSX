@@ -184,7 +184,7 @@ void Slot::slotOffVoice()
 }
 
 // Slot key on/off for drums
-void Slot::slotOnRythm(bool attack, bool settle, bool reset_phase)
+void Slot::slotOnRhythm(bool attack, bool settle, bool reset_phase)
 {
     if (!sd->slot_on_drum && !sd->slot_on_voice) {
         if (attack) {
@@ -200,7 +200,7 @@ void Slot::slotOnRythm(bool attack, bool settle, bool reset_phase)
     }
     sd->slot_on_drum = true;
 }
-void Slot::slotOffRythm()
+void Slot::slotOffRhythm()
 {
     sd->slot_on_drum = false;
     if (!sd->slot_on_voice && sd->eg_state != FINISH /* not already in off state */) {
