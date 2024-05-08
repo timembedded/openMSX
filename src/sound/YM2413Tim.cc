@@ -395,45 +395,38 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
                 bufs[9][sample] += narrow_cast<float>(2 * calc_car);
             }
 
-            // SD
-            bool got_noise = false;
+            // Noise generator for SD and HH
             bool noise_bit = false;
-            if (ch7_car_active) {
+            if (ch7_mod_active || ch7_car_active) {
                 noise_seed >>= 1;
                 noise_bit = noise_seed & 1;
                 if (noise_bit) noise_seed ^= 0x8003020;
-                got_noise = true;
+            }
+
+            // SD
+            if (ch7_car_active) {
                 slot.select(ch7.car);
                 bufs[10][sample] += narrow_cast<float>(
                     -2 * slot.calc_slot_snare(noise_bit));
             }
 
-            // CYM
-            bool got_ch7mod_ch8car = false;
+            // ch7_mod and ch8_car are used for both CYM and HH
             unsigned phase7 = 0, phase8 = 0;
-            if (ch8_car_active) {
+            if (ch7_mod_active || ch8_car_active) {
                 slot.select(ch7.mod);
                 phase7 = slot.calc_phase(0);
                 slot.select(ch8.car);
                 phase8 = slot.calc_phase(0);
-                got_ch7mod_ch8car = true;
+            }
+
+            // CYM
+            if (ch8_car_active) {
                 bufs[11][sample] += narrow_cast<float>(
                     -2 * slot.calc_slot_cym(phase7, phase8));
             }
 
             // HH
             if (ch7_mod_active) {
-                if (!got_noise) {
-                    noise_seed >>= 1;
-                    noise_bit = noise_seed & 1;
-                    if (noise_bit) noise_seed ^= 0x8003020;
-                }
-                if (!got_ch7mod_ch8car) {
-                    slot.select(ch7.mod);
-                    phase7 = slot.calc_phase(0);
-                    slot.select(ch8.car);
-                    phase8 = slot.calc_phase(0);
-                }
                 slot.select(ch7.mod);
                 bufs[12][sample] += narrow_cast<float>(
                     2 * slot.calc_slot_hat(phase7, phase8, noise_bit));
