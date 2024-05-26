@@ -36,6 +36,8 @@ private:
 
     void calcChannel(Channel& ch, uint8_t FLAGS, std::span<float> buf);
 
+    void generateChannelsVM2413(std::span<float*, 9 + 5> bufs, unsigned num);
+
 private:
     /** Channel & Slot */
     Slot &slot;

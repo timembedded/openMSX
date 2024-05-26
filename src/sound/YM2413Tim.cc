@@ -91,7 +91,7 @@ void YM2413::reset()
     registerLatch = 0;
 }
 
-void YM2413::setRhythmFlags(uint8_t old)
+void YM2413::setRhythmFlags(uint8_t flags)
 {
     Channel& ch6 = channels[6];
     Channel& ch7 = channels[7];
@@ -104,8 +104,10 @@ void YM2413::setRhythmFlags(uint8_t old)
     bool key_cym = false;
     bool key_hh = false;
 
+    uint8_t old = reg_flags;
+    reg_flags = flags;
+
     // flags = X | X | mode | BD | SD | TOM | TC | HH
-    uint8_t flags = reg_flags;
     if ((flags ^ old) & 0x20) {
         if (flags & 0x20) {
             // OFF -> ON
@@ -320,10 +322,153 @@ void YM2413::calcChannel(Channel& ch, uint8_t FLAGS, std::span<float> buf)
     }
 }
 
+static const uint8_t kl_table[16] = {
+    0b000000, 0b011000, 0b100000, 0b100101,
+    0b101000, 0b101011, 0b101101, 0b101111,
+    0b110000, 0b110010, 0b110011, 0b110100,
+    0b110101, 0b110110, 0b110111, 0b111000
+}; // 0.75db/step, 6db/oct
+
+void YM2413::generateChannelsVM2413(std::span<float*, 9 + 5> bufs, unsigned num)
+{
+    for (auto sample : xrange(num)) {
+        bool rhythm = isRhythm();
+        for(int slotnum = 0; slotnum < 18; slotnum++) {
+            slot.select(slotnum);
+
+            // Updating rhythm status and key flag
+            bool key = false;
+            if (rhythm && slotnum >= 12) {
+                switch (slotnum) {
+                    case 12: //BD1
+                    case 13: //BD2
+                        key = (reg_flags >> 4) & 1;
+                        break;
+                    case 14: // HH
+                        key = (reg_flags >> 0) & 1;
+                        break;
+                    case 15: // SD
+                        key = (reg_flags >> 3) & 1;
+                        break;
+                    case 16: // TOM
+                        key = (reg_flags >> 2) & 1;
+                        break;
+                    case 17: // CYM
+                        key = (reg_flags >> 1) & 1;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            if (reg_key[slotnum/2]) {
+                key = true;
+            }
+
+
+            // calculate key-scale attenuation amount (controller.vhd)
+            int ch = slotnum / 2;
+            uint16_t fnum = slot.sd->pg_freq & 0x1ff; // 9 bits, F-Number
+            uint8_t blk = slot.sd->pg_freq >> 9; // 3 bits, Block
+
+            uint8_t kll = ( kl_table[(fnum >> 5) & 15] - ((7 - blk) << 3) ) << 1;
+            
+            if ((kll >> 7) || slot.patch.pd->_kl == 0) {
+                kll = 0;
+            }else{
+                kll = kll >> (3 - slot.patch.pd->_kl);
+            }
+            
+            // calculate base total level from volume register value
+            uint8_t tll;
+            if (rhythm && (slotnum == 14 || slotnum == 16)) { // hh and tom
+                tll = reg_patch[ch] << 3;
+            }else
+            if ((slotnum & 1) == 0) {
+                tll = slot.patch.pd->_tl << 1; // mod
+            }else{
+                tll = reg_volume[ch] << 3;     // car
+            }
+            
+            tll = tll + kll;
+
+            uint8_t tl;
+            if ((tll >> 7) != 0) {
+                tl = 0x7f;
+            }else{
+                tl = tll & 0x7f;
+            }
+
+            // output release rate (depends on the sustine and envelope type).
+            uint8_t rr;  // 4 bits - Release Rate
+            if  (key) { // key on
+                if (slot.patch.pd->EG) {
+                    rr = 0;
+                }else{
+                    rr = slot.patch.pd->RR;
+                }
+            }else{ // key off
+                if ((slotnum & 1) == 0 && !(rhythm && ch >= 7)) {
+                    rr  = 0;
+                }else
+                if (slot.sd->sustain) {
+                    rr  = 5;
+                }else
+                if (!slot.patch.pd->EG) {
+                    rr  = 7;
+                }else{
+                    rr  = slot.patch.pd->RR;
+                }
+            }
+
+            // EnvelopeGenerator
+            uint16_t egout;
+            slot.vm2413EnvelopeGenerator(tl, rr, key, rhythm, egout);
+
+            // PhaseGenerator
+            bool noise;
+            uint32_t pgout; // 18 bits
+            slot.vm2413PhaseGenerator(key, rhythm, noise, pgout);
+
+            // Operator
+            uint16_t opout;
+            slot.vm2413Operator(rhythm, noise, pgout, egout, opout);
+
+            // OutputGenerator
+            slot.vm2413OutputGenerator(opout);
+        }
+
+        // Music channels
+        for (int i = 0; i < ((rhythm)? 6:9); i++) {
+            bufs[i][sample] += narrow_cast<float>(slot.vm2413GetOutput(i*2+1));
+        }
+        // Drum channels
+        if (rhythm) {
+            bufs[6] = nullptr;
+            bufs[7] = nullptr;
+            bufs[8] = nullptr;
+
+            bufs[9][sample] += narrow_cast<float>(slot.vm2413GetOutput(13) * 2); // BD
+            bufs[10][sample] += narrow_cast<float>(slot.vm2413GetOutput(14) * 2); // HH
+            bufs[11][sample] += narrow_cast<float>(slot.vm2413GetOutput(15) * 2); // SD
+            bufs[12][sample] += narrow_cast<float>(slot.vm2413GetOutput(16) * 2); // TOM
+            bufs[13][sample] += narrow_cast<float>(slot.vm2413GetOutput(17) * 2); // CYM
+        }else{
+            bufs[9] = nullptr;
+            bufs[10] = nullptr;
+            bufs[11] = nullptr;
+            bufs[12] = nullptr;
+            bufs[13] = nullptr;
+        }
+    }
+}
+
 void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
 {
     assert(num != 0);
 
+#if 1
+    generateChannelsVM2413(bufs, num);
+#else
     for (auto i : xrange(isRhythm() ? 6 : 9)) {
         Channel& ch = channels[i];
         slot.select(ch.car);
@@ -447,6 +592,7 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
         bufs[12] = nullptr;
         bufs[13] = nullptr;
     }
+#endif
 }
 
 void YM2413::writePort(bool port, uint8_t value, int /*offset*/)
@@ -646,9 +792,7 @@ void YM2413::writeReg(uint8_t r, uint8_t data)
         break;
     }
     case 0x0E: {
-        uint8_t old = reg_flags;
-        reg_flags = data;
-        setRhythmFlags(old);
+        setRhythmFlags(data);
         break;
     }
     case 0x19: case 0x1A: case 0x1B: case 0x1C:

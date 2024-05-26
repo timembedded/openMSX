@@ -72,31 +72,38 @@ void Patch::initCarrier(std::span<const uint8_t, 8> data)
 
 void Patch::setKR(uint8_t value)
 {
+    pd->_kr = value;
     pd->KR = value ? 8 : 10;
 }
 void Patch::setML(uint8_t value)
 {
+    pd->_ml = value & 15;
     pd->ML = mlTable[value];
 }
 void Patch::setKL(uint8_t value)
 {
+    pd->_kl = value & 3;
     pd->KL = tllTab[value];
 }
 void Patch::setTL(uint8_t value)
 {
     assert(value < 64);
+    pd->_tl = value & 0x3f;
     pd->TL = narrow<uint8_t>(TL2EG(value));
 }
 void Patch::setWF(uint8_t value)
 {
+    pd->_wf = value & 1;
     pd->WF = waveform[value];
 }
 void Patch::setFB(uint8_t value)
 {
+    pd->_fb = value & 7;
     pd->FB = value ? 8 - value : 0;
 }
 void Patch::setSL(uint8_t value)
 {
+    pd->_sl = value & 15;
     pd->SL = slTab[value];
 }
 

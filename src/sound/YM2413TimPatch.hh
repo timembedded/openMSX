@@ -42,6 +42,13 @@ public:
     void setSL(uint8_t value);
 
     struct PatchData {
+        bool _wf;
+        uint8_t _fb;
+        uint8_t _kl;
+        uint8_t _sl;
+        bool _kr;
+        uint8_t _ml;
+        uint8_t _tl;
         const uint16_t *WF; // 0-1    transformed to waveform[0-1]
         const uint8_t *KL;  // 0-3    transformed to tllTab[0-3]
         unsigned SL;        // 0-15   transformed to slTable[0-15]
