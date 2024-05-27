@@ -1473,9 +1473,6 @@
     <ClCompile Include="..\..\src\sound\YM2413TimSlot.cc">
       <Filter>sound</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\sound\YM2413TimChannel.cc">
-      <Filter>sound</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\sound\YM2413TimPatch.cc">
       <Filter>sound</Filter>
     </ClCompile>
@@ -3111,9 +3108,6 @@
     <None Include="$(OpenMSXSrcDir)\3rdparty\imgui/imstb_truetype.h" />
     <None Include="$(OpenMSXSrcDir)\3rdparty\imgui/misc\freetype\imgui_freetype.h" />
     <None Include="$(OpenMSXSrcDir)\3rdparty\imgui_memory_editor/memory_editor.h" />
-    <None Include="..\..\src\sound\YM2413TimTables.ii">
-      <Filter>sound</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(OpenMSXSrcDir)\resource\openmsx.rc">

@@ -29,25 +29,22 @@ Slot Slot::_instance;
 // Slot
 //
 
-Slot::Slot() :
-    patch(Patch::instance())
+Slot::Slot()
 {
 }
 
 void Slot::reset()
 {
-    sd->pg_phase = 0;
-    sd->output = 0;
-    sd->feedback = 0;
-    setEnvelopeState(FINISH);
-    sd->eg_tll = 0;
-    sd->sustain = false;
-    sd->eg_volume = TL2EG(0);
-    sd->slot_on_voice = false;
-    sd->slot_on_drum = false;
-    sd->eg_rks = 0;
-    // VHDL
+    sd->vm2413phase.pg_phase = 0;
+    sd->vm2413phase.pg_lastkey = false;
+    sd->li_data = {false, 0};
+    sd->fdata = {false, 0};
+    sd->vm2413env.eg_lastkey = false;
+    sd->vm2413env.eg_state = SlotData::EGState::Finish;
+    sd->vm2413env.eg_phase = 0;
+    sd->vm2413env.eg_dphase = 0;
     vm2413env.ntable = 0x3ffff;
+    vm2413env.amphase = 0;
 }
 
 void Slot::select(int num)
@@ -55,364 +52,8 @@ void Slot::select(int num)
     assert(num < (int)(sizeof(slotData)/sizeof(slotData[0])));
     slot = num;
     sd = &slotData[num];
-    patch.select(sd->patch);
 }
 
-void Slot::updatePG(uint16_t freq)
-{
-    sd->pg_freq = freq;
-}
-
-void Slot::updateTLL(uint16_t freq, bool actAsCarrier)
-{
-    sd->eg_tll = patch.pd->KL[freq >> 5] + (actAsCarrier ? sd->eg_volume : patch.pd->TL);
-}
-
-void Slot::updateRKS(uint16_t freq)
-{
-    uint16_t rks = freq >> patch.pd->KR;
-    assert(rks < 16);
-    sd->eg_rks = rks;
-}
-
-// Is called when voice data is changed
-void Slot::updateEG()
-{
-    switch (sd->eg_state) {
-    case ATTACK:
-        // Original code had separate table for AR, the values in
-        // this table were 12 times bigger than the values in the
-        // dPhaseDrTab[eg_rks] table, expect for the value for AR=15.
-        // But when AR=15, the value doesn't matter.
-        //
-        // This factor 12 can also be seen in the attack/decay rates
-        // table in the ym2413 application manual (table III-7, page
-        // 13). For other chips like OPL1, OPL3 this ratio seems to be
-        // different.
-        sd->eg_dPhase = dPhaseDrTab[sd->eg_rks][patch.pd->AR] * 12;
-        break;
-    case DECAY:
-        sd->eg_dPhase = dPhaseDrTab[sd->eg_rks][patch.pd->DR];
-        break;
-    case SUSTAIN:
-        sd->eg_dPhase = dPhaseDrTab[sd->eg_rks][patch.pd->RR];
-        break;
-    case RELEASE: {
-        unsigned idx = sd->sustain ? 5 : (patch.pd->EG ? patch.pd->RR : 7);
-        sd->eg_dPhase = dPhaseDrTab[sd->eg_rks][idx];
-        break;
-    }
-    case SETTLE:
-        // Value based on ym2413 application manual:
-        //  - p10: (envelope graph)
-        //         DP: 10ms
-        //  - p13: (table III-7 attack and decay rates)
-        //         Rate 12-0 -> 10.22ms
-        //         Rate 12-1 ->  8.21ms
-        //         Rate 12-2 ->  6.84ms
-        //         Rate 12-3 ->  5.87ms
-        // The datasheet doesn't say anything about key-scaling for
-        // this state (in fact it doesn't say much at all about this
-        // state). Experiments showed that the with key-scaling the
-        // output matches closer the real HW. Also all other states use
-        // key-scaling.
-        sd->eg_dPhase = (dPhaseDrTab[sd->eg_rks][12]);
-        break;
-    case SUSHOLD:
-    case FINISH:
-        sd->eg_dPhase = 0;
-        break;
-    }
-}
-
-void Slot::updateAll(uint16_t freq, bool actAsCarrier)
-{
-    updatePG(freq);
-    updateTLL(freq, actAsCarrier);
-    updateRKS(freq);
-    updateEG(); // EG should be updated last
-}
-
-void Slot::setEnvelopeState(EnvelopeState state)
-{
-    sd->eg_state = state;
-    switch (sd->eg_state) {
-    case ATTACK:
-        sd->eg_phase_max = (patch.pd->AR == 15) ? 0 : EG_DP_MAX;
-        break;
-    case DECAY:
-        sd->eg_phase_max = narrow<int>(patch.pd->SL);
-        break;
-    case SUSHOLD:
-        sd->eg_phase_max = EG_DP_INF;
-        break;
-    case SETTLE:
-    case SUSTAIN:
-    case RELEASE:
-        sd->eg_phase_max = EG_DP_MAX;
-        break;
-    case FINISH:
-        sd->eg_phase = EG_DP_MAX;
-        sd->eg_phase_max = EG_DP_INF;
-        break;
-    }
-    updateEG();
-}
-
-bool Slot::isActive() const
-{
-    return sd->eg_state != FINISH;
-}
-
-// Slot key on/off for normal voices
-void Slot::slotOnVoice(bool settle)
-{
-    if (!sd->slot_on_drum && !sd->slot_on_voice) {
-        if (settle) {
-            setEnvelopeState(SETTLE);
-            // this will shortly set both car and mod to ATTACK state
-        }
-    }
-    sd->slot_on_voice = true;
-}
-void Slot::slotOffVoice()
-{
-    sd->slot_on_voice = false;
-    if (!sd->slot_on_drum && sd->eg_state != FINISH /* not already in off state */) {
-        // TODO: Why is this? Ignore for now
-        //if (sd->eg_state == ATTACK) {
-        //    sd->eg_phase = (arAdjustTab[sd->eg_phase >> EP_FP_BITS /*.toInt()*/]) << EP_FP_BITS;
-        //}
-        setEnvelopeState(RELEASE);
-    }
-}
-
-// Slot key on/off for drums
-void Slot::slotOnRhythm(bool attack, bool settle, bool reset_phase)
-{
-    if (!sd->slot_on_drum && !sd->slot_on_voice) {
-        if (attack) {
-            setEnvelopeState(ATTACK);
-            sd->eg_phase = 0;
-        }
-        if (reset_phase) {
-            sd->pg_phase = 0;
-        }
-        if (settle) {
-            setEnvelopeState(SETTLE);
-        }
-    }
-    sd->slot_on_drum = true;
-}
-void Slot::slotOffRhythm()
-{
-    sd->slot_on_drum = false;
-    if (!sd->slot_on_voice && sd->eg_state != FINISH /* not already in off state */) {
-        // TODO: Why is this? Ignore for now
-        //if (sd->eg_state == ATTACK) {
-        //    sd->eg_phase = (arAdjustTab[sd->eg_phase >> EP_FP_BITS /*.toInt()*/]) << EP_FP_BITS;
-        //}
-        setEnvelopeState(RELEASE);
-    }
-}
-
-// Change a rhythm voice
-void Slot::setPatch(int voice)
-{
-    sd->patch = voice;
-    patch.select(sd->patch);
-    if ((sd->eg_state == SUSHOLD) && (patch.pd->EG == 0)) {
-        setEnvelopeState(SUSTAIN);
-    }
-    setEnvelopeState(sd->eg_state); // recalculate eg_phase_max
-}
-
-// Set new volume based on 4-bit register value (0-15).
-void Slot::setVolume(unsigned value)
-{
-    // '<< 2' to transform 4 bits to the same range as the 6 bits TL field
-    sd->eg_volume = TL2EG(value << 2);
-}
-
-// PG
-unsigned Slot::calc_phase(unsigned lfo_pm)
-{
-    uint16_t fnum = sd->pg_freq & 511;
-    uint16_t block = sd->pg_freq / 512;
-    unsigned tmp = ((2 * fnum + pmTable[fnum >> 6][lfo_pm]) * patch.pd->ML) << block;
-    uint16_t dphase = tmp >> (21 - DP_BITS);
-
-    sd->pg_phase += dphase;
-    return sd->pg_phase >> DP_BASE_BITS;
-}
-
-// EG
-void Slot::calc_envelope_outline(unsigned& out)
-{
-    switch (sd->eg_state) {
-    case ATTACK:
-        out = 0;
-        sd->eg_phase = 0;
-        setEnvelopeState(DECAY);
-        break;
-    case DECAY:
-        sd->eg_phase = sd->eg_phase_max;
-        setEnvelopeState(patch.pd->EG ? SUSHOLD : SUSTAIN);
-        break;
-    case SUSTAIN:
-    case RELEASE:
-        setEnvelopeState(FINISH);
-        break;
-    case SETTLE:
-        // Comment copied from Burczynski code (didn't verify myself):
-        //   When CARRIER envelope gets down to zero level, phases in
-        //   BOTH operators are reset (at the same time?).
-        setEnvelopeState(ATTACK);
-        sd->eg_phase = 0;
-        sd->pg_phase = 0;
-        assert (sd->sibling != -1);
-        if (sd->sibling != -1) {
-            SlotData *sdsave = sd;
-            select(sd->sibling);
-            setEnvelopeState(ATTACK);
-            sd->eg_phase = 0;
-            sd->pg_phase = 0;
-            sd = sdsave;
-        }
-        break;
-    case SUSHOLD:
-    case FINISH:
-    default:
-        UNREACHABLE;
-    }
-}
-
-unsigned Slot::calc_envelope(bool HAS_AM, bool FIXED_ENV, int lfo_am, unsigned fixed_env)
-{
-    assert(!FIXED_ENV || (sd->eg_state == one_of(SUSHOLD, FINISH)));
-
-    if (FIXED_ENV) {
-        unsigned out = fixed_env;
-        if (HAS_AM) {
-            out += lfo_am; // [0, 768)
-            out |= 3;
-        }
-        else {
-            // out |= 3   is already done in calc_fixed_env()
-        }
-        return out;
-    }
-    else {
-        unsigned out = sd->eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128]
-        if (sd->eg_state == ATTACK) {
-            out = arAdjustTab[out]; // [0, 128]
-        }
-        sd->eg_phase += sd->eg_dPhase;
-        if (sd->eg_phase >= sd->eg_phase_max) {
-            calc_envelope_outline(out);
-        }
-        out = EG2DB(out + sd->eg_tll); // [0, 732]
-        if (HAS_AM) {
-            out += lfo_am; // [0, 758]
-        }
-        return out | 3;
-    }
-}
-
-unsigned Slot::calc_fixed_env(bool HAS_AM) const
-{
-    assert(sd->eg_state == one_of(SUSHOLD, FINISH));
-    assert(sd->eg_dPhase == 0);
-    unsigned out = sd->eg_phase >> EP_FP_BITS; // .toInt(); // in range [0, 128)
-    out = EG2DB(out + sd->eg_tll); // [0, 480)
-    if (!HAS_AM) {
-        out |= 3;
-    }
-    return out;
-}
-
-// Convert Amp(0 to EG_HEIGHT) to Phase(0 to 8PI)
-static constexpr int wave2_8pi(int e)
-{
-    int shift = SLOT_AMP_BITS - PG_BITS - 2;
-    if (shift > 0) {
-        return e >> shift;
-    }
-    else {
-        return e << -shift;
-    }
-}
-
-// CARRIER
-int Slot::calc_slot_car(bool HAS_AM, bool FIXED_ENV, unsigned lfo_pm, int lfo_am, int fm, unsigned fixed_env)
-{
-    int phase = narrow<int>(calc_phase(lfo_pm)) + wave2_8pi(fm);
-    unsigned egOut = calc_envelope(HAS_AM, FIXED_ENV, lfo_am, fixed_env);
-    int newOutput = dB2LinTab[patch.pd->WF[phase & PG_MASK] + egOut];
-    sd->output = (sd->output + newOutput) >> 1;
-    return sd->output;
-}
-
-// MODULATOR
-int Slot::calc_slot_mod(bool HAS_AM, bool HAS_FB, bool FIXED_ENV, unsigned lfo_pm, int lfo_am, unsigned fixed_env)
-{
-    assert((patch.pd->FB != 0) == HAS_FB);
-    unsigned phase = calc_phase(lfo_pm);
-    unsigned egOut = calc_envelope(HAS_AM, FIXED_ENV, lfo_am, fixed_env);
-    if (HAS_FB) {
-        phase += wave2_8pi(sd->feedback) >> patch.pd->FB;
-    }
-    int newOutput = dB2LinTab[patch.pd->WF[phase & PG_MASK] + egOut];
-    sd->feedback = (sd->output + newOutput) >> 1;
-    sd->output = newOutput;
-    return sd->feedback;
-}
-
-// TOM (ch8 mod)
-int Slot::calc_slot_tom()
-{
-    unsigned phase = calc_phase(0);
-    unsigned egOut = calc_envelope(false, false, 0, 0);
-    return dB2LinTab[patch.pd->WF[phase & PG_MASK] + egOut];
-}
-
-// SNARE (ch7 car)
-int Slot::calc_slot_snare(bool noise)
-{
-    unsigned phase = calc_phase(0);
-    unsigned egOut = calc_envelope(false, false, 0, 0);
-    return BIT(phase, 7)
-        ? dB2LinTab[(noise ? DB_POS(0.0) : DB_POS(15.0)) + egOut]
-        : dB2LinTab[(noise ? DB_NEG(0.0) : DB_NEG(15.0)) + egOut];
-}
-
-// TOP-CYM (ch8 car)
-int Slot::calc_slot_cym(unsigned phase7, unsigned phase8)
-{
-    unsigned egOut = calc_envelope(false, false, 0, 0);
-    unsigned dbOut = (((BIT(phase7, PG_BITS - 8) ^
-        BIT(phase7, PG_BITS - 1)) |
-        BIT(phase7, PG_BITS - 7)) ^
-        (BIT(phase8, PG_BITS - 7) &
-            !BIT(phase8, PG_BITS - 5)))
-        ? DB_NEG(3.0)
-        : DB_POS(3.0);
-    return dB2LinTab[dbOut + egOut];
-}
-
-// HI-HAT (ch7 mod)
-int Slot::calc_slot_hat(unsigned phase7, unsigned phase8, bool noise)
-{
-    unsigned egOut = calc_envelope(false, false, 0, 0);
-    unsigned dbOut = (((BIT(phase7, PG_BITS - 8) ^
-        BIT(phase7, PG_BITS - 1)) |
-        BIT(phase7, PG_BITS - 7)) ^
-        (BIT(phase8, PG_BITS - 7) &
-            !BIT(phase8, PG_BITS - 5)))
-        ? (noise ? DB_NEG(12.0) : DB_NEG(24.0))
-        : (noise ? DB_POS(12.0) : DB_POS(24.0));
-    return dB2LinTab[dbOut + egOut];
-}
 
 //-----------------------------------------------------------------------------------------
 //-- Envelope Generator
@@ -470,20 +111,18 @@ uint16_t Slot::attack_table(uint32_t addr /* 22 bits */) // returns 13 bits
 }
 
 void Slot::vm2413EnvelopeGenerator(
-        uint8_t tl, // 7 bits 
-        uint8_t rr, // 4 bits - Release Rate
+        uint8_t tll, // 7 bits 
+        uint8_t rks, // 7 bits 
+        uint8_t rrr, // 4 bits - Release Rate
+        uint8_t ar,  // 4 bits - Attack Rate
+        uint8_t dr,  // 4 bits - Decay Rate
+        uint8_t sl,  // 4 bits - Sustine Level
+        bool am,
         bool key,
         bool rhythm,
         uint16_t &egout // 13 bits
     )
 {
-    // Inputs
-    uint8_t kl  = patch.pd->_kl;  // 2 bits
-    uint8_t ar  = patch.pd->AR;  // 4 bits - Attack Rate
-    uint8_t dr  = patch.pd->DR;  // 4 bits - Decay Rate
-    uint8_t sl  = patch.pd->_sl;  // 4 bits - Sustine Level
-    bool am = (patch.pd->AMPM & 2);
-
     // Variables
     uint8_t rm = 0; // 0-31
 
@@ -500,15 +139,15 @@ void Slot::vm2413EnvelopeGenerator(
     switch (sd->vm2413env.eg_state) {
         case SlotData::EGState::Attack:
             rm = ar;
-            egtmp = (tl << 6) + attack_table(sd->vm2413env.eg_phase & 0x3fffff);
+            egtmp = (tll << 6) + attack_table(sd->vm2413env.eg_phase & 0x3fffff);
             break;
         case SlotData::EGState::Decay:
             rm = dr;
-            egtmp = (tl << 6) + ((sd->vm2413env.eg_phase >> 9) & 0x1fff);
+            egtmp = (tll << 6) + ((sd->vm2413env.eg_phase >> 9) & 0x1fff);
             break;
         case SlotData::EGState::Release:
-            rm = rr;
-            egtmp = (tl << 6) + ((sd->vm2413env.eg_phase >> 9) & 0x1fff);
+            rm = rrr;
+            egtmp = (tll << 6) + ((sd->vm2413env.eg_phase >> 9) & 0x1fff);
             break;
         case SlotData::EGState::Finish:
             egtmp = 0x1fff;
@@ -539,25 +178,6 @@ void Slot::vm2413EnvelopeGenerator(
     }
 
     if (rm != 0) {
-        // Determine RKS
-        uint8_t rks; // 4 bits - Rate-KeyScale
-        bool kr = patch.pd->_kr;
-        uint8_t blk = sd->pg_freq >> 9; // 3 bits, Block
-        uint16_t fnum = sd->pg_freq & 0x1ff; // 9 bits, F-Number
-        if (rhythm && slot >= 14) {
-          if (kr) {
-            rks = 5;
-          }else{
-            rks = blk >> 1;
-          }
-        }else{
-          if (kr) {
-            rks = (blk << 1) | (fnum >> 8);
-          }else{
-            rks = blk >> 1;
-          }
-        }
-
         rm += (rks >> 2);
         if (rm > 15) {
             rm = 15;
@@ -627,17 +247,16 @@ static const uint64_t noise14_tbl = 0x8888888911111110;
 static const uint8_t noise17_tbl = 0x0a;
 
 void Slot::vm2413PhaseGenerator(
+        bool pm,
+        uint8_t ml, // 4 bits, Multiple
+        uint8_t blk, // 3 bits, Block
+        uint16_t fnum, // 9 bits, F-Number
         bool key, // 1 bit
         bool rhythm, // 1 bit
         bool &noise,
         uint32_t &pgout // 18 bits
     )
 {
-    bool pm = (patch.pd->AMPM & 1);
-    uint8_t ml = patch.pd->_ml; // 4 bits, Multiple
-    uint16_t fnum = sd->pg_freq & 0x1ff; // 9 bits, F-Number
-    uint8_t blk = (sd->pg_freq >> 9) & 7; // 3 bits, Block
-
     noise = vm2413phase.noise14 ^ vm2413phase.noise17;
     pgout = sd->vm2413phase.pg_phase;
 
@@ -773,6 +392,8 @@ void Slot::vm2413SineTable(
 void Slot::vm2413Operator(
         bool rhythm,
         bool noise,
+        bool wf,
+        uint8_t fb,  // 3 bits , Feedback
         uint32_t pgout, // 18 bits
         uint16_t egout, // 13 bits
         uint16_t &opout  // 14 bits
@@ -786,9 +407,6 @@ void Slot::vm2413Operator(
     uint32_t w_modula_m; // 20 bits
     uint32_t w_modula_c; // 20 bits
     uint32_t w_modula; // 20 bits
-
-    bool wf = patch.pd->_wf;
-    uint8_t fb = patch.pd->_fb;  // 3 bits , Feedback
 
     // Get feedback data
     fdata = slotData[faddr].fdata;

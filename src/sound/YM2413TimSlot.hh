@@ -26,7 +26,6 @@ public:
     void reset();
 
     void select(int num);
-    void setEnvelopeState(EnvelopeState state);
     bool isActive() const;
 
     void slotOnVoice(bool settle);
@@ -34,30 +33,8 @@ public:
     void slotOffRhythm();
     void slotOffVoice();
 
-    void setPatch(int voice);
-    void setVolume(unsigned value);
-
-    unsigned calc_phase(unsigned lfo_pm);
-    unsigned calc_envelope(bool HAS_AM, bool FIXED_ENV, int lfo_am, unsigned fixed_env);
-    unsigned calc_fixed_env(bool HAS_AM) const;
-    void calc_envelope_outline(unsigned& out);
-    int calc_slot_car(bool HAS_AM, bool FIXED_ENV, unsigned lfo_pm, int lfo_am, int fm, unsigned fixed_env);
-    int calc_slot_mod(bool HAS_AM, bool HAS_FB, bool FIXED_ENV, unsigned lfo_pm, int lfo_am, unsigned fixed_env);
-
-    int calc_slot_tom();
-    int calc_slot_snare(bool noise);
-    int calc_slot_cym(unsigned phase7, unsigned phase8);
-    int calc_slot_hat(unsigned phase7, unsigned phase8, bool noise);
-    void updatePG(uint16_t freq);
-    void updateTLL(uint16_t freq, bool actAsCarrier);
-    void updateRKS(uint16_t freq);
-    void updateEG();
-    void updateAll(uint16_t freq, bool actAsCarrier);
-
     template<typename Archive>
     void serialize(Archive& ar, unsigned version);
-
-    Patch &patch;
 
     struct SignedLiType {
         uint16_t value; // 9 bits
@@ -65,30 +42,8 @@ public:
     };
 
     struct SlotData {
-        // OUTPUT
-        int feedback;
-        int output;     // Output value of slot
-
         // for Phase Generator (PG)
         uint16_t pg_freq;
-        unsigned pg_phase;           // Phase counter
-
-        // for Envelope Generator (EG)
-        unsigned eg_volume;          // Current volume
-        unsigned eg_tll;             // Total Level + Key scale level
-        uint16_t eg_rks;
-        EnvelopeState eg_state;      // Current state
-        EnvPhaseIndex eg_phase;      // Phase
-        EnvPhaseIndex eg_dPhase;     // Phase increment amount
-        EnvPhaseIndex eg_phase_max;
-
-        bool slot_on_voice;
-        bool slot_on_drum;
-        bool sustain;                // Sustain
-
-        int sibling; // pointer to sibling slot (only valid for car -> mod)
-
-        int patch;
 
         // VM2413 Envelope Generator
         enum EGState {
@@ -130,8 +85,13 @@ public:
     uint16_t attack_table(uint32_t addr);
 
     void vm2413EnvelopeGenerator(
-        uint8_t tl,
-        uint8_t rr,
+        uint8_t tll,
+        uint8_t rks,
+        uint8_t rrr,
+        uint8_t ar,
+        uint8_t dr,
+        uint8_t sl,
+        bool am,
         bool key,
         bool rhythm,
         uint16_t &egout // 13 bits
@@ -146,6 +106,10 @@ public:
     vm2413PhaseCommon vm2413phase;
 
     void vm2413PhaseGenerator(
+        bool pm,
+        uint8_t ml, // 4 bits, Multiple
+        uint8_t blk, // 3 bits, Block
+        uint16_t fnum, // 9 bits, F-Number
         bool key, // 1 bit
         bool rhythm, // 1 bit
         bool &noise,
@@ -161,6 +125,8 @@ public:
     void vm2413Operator(
         bool rhythm,
         bool noise,
+        bool wf,
+        uint8_t fb,  // 3 bits , Feedback
         uint32_t pgout, // 18 bits
         uint16_t egout, // 13 bits
         uint16_t &opout  // 14 bits

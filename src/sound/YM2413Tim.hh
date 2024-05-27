@@ -1,7 +1,7 @@
 #pragma once
 
 #include "YM2413Core.hh"
-#include "YM2413TimChannel.hh"
+#include "YM2413TimSlot.hh"
 #include "serialize_meta.hh"
 #include <array>
 #include <span>
@@ -30,18 +30,11 @@ private:
     void writePatchReg(uint8_t r, uint8_t data);
 
     void setRhythmFlags(uint8_t old);
-    void update_key_status();
     bool isRhythm() const;
-    uint16_t getFreq(unsigned channel) const;
-
-    void calcChannel(Channel& ch, uint8_t FLAGS, std::span<float> buf);
-
-    void generateChannelsVM2413(std::span<float*, 9 + 5> bufs, unsigned num);
 
 private:
     /** Channel & Slot */
     Slot &slot;
-    std::array<Channel, 9> channels;
 
     /** Pitch Modulator */
     unsigned pm_phase;
@@ -53,7 +46,7 @@ private:
     unsigned noise_seed;
 
     /** Voice Data */
-    Patch &patch;
+    std::array<Patch, (16+3)*2> patch;
 
     /** Registers */
     uint8_t reg_flags;
@@ -62,6 +55,7 @@ private:
     std::array<uint8_t, 9> reg_volume; // 0-15
     std::array<uint8_t, 9> reg_patch;  // 0-15
     std::array<uint8_t, 9> reg_key;  // 1-bit
+    std::array<uint8_t, 9> reg_sustain;  // 1-bit
     uint8_t registerLatch;
 
     /** Patches */
@@ -71,7 +65,6 @@ private:
 } // namespace YM2413Tim
 
 SERIALIZE_CLASS_VERSION(YM2413Tim::Slot, 4);
-SERIALIZE_CLASS_VERSION(YM2413Tim::Channel, 2);
 SERIALIZE_CLASS_VERSION(YM2413Tim::YM2413, 4);
 
 } // namespace openmsx
