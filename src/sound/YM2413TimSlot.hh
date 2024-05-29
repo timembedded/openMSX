@@ -84,6 +84,30 @@ public:
     int16_t attack_multiply(uint8_t i0, int8_t i1);
     uint16_t attack_table(uint32_t addr);
 
+    void vm2413Controller(
+        // In
+        bool rhythm,
+        uint8_t reg_flags,
+        uint8_t reg_key,
+        uint16_t reg_freq,
+        uint16_t reg_patch,
+        uint16_t reg_volume,
+        uint8_t reg_sustain,
+        uint8_t kl,     // 0-3   key scale level
+        bool    eg,     // 0-1
+        uint8_t tl,     // 0-63  volume (total level)
+        uint8_t rr,     // 0-15
+        bool    kr,     // 0-1   key scale of rate
+        // Out
+        bool &kflag,    // 1 bit, key
+        uint16_t &fnum, // 9 bits, F-Number
+        uint8_t &blk,   // 3 bits, Block
+        uint8_t &kll,
+        uint8_t &tll,
+        uint8_t &rks,   // 4 bits - Rate-KeyScale
+        uint8_t &rrr    // 4 bits - Release Rate
+    );
+
     void vm2413EnvelopeGenerator(
         uint8_t tll,
         uint8_t rks,

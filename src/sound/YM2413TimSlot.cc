@@ -54,6 +54,136 @@ void Slot::select(int num)
     sd = &slotData[num];
 }
 
+//-----------------------------------------------------------------------------------------
+//-- Controller
+//-----------------------------------------------------------------------------------------
+
+static const uint8_t kl_table[16] = {
+    0b000000, 0b011000, 0b100000, 0b100101,
+    0b101000, 0b101011, 0b101101, 0b101111,
+    0b110000, 0b110010, 0b110011, 0b110100,
+    0b110101, 0b110110, 0b110111, 0b111000
+}; // 0.75db/step, 6db/oct
+
+void Slot::vm2413Controller(
+        // In
+        bool rhythm,
+        uint8_t reg_flags,
+        uint8_t reg_key,
+        uint16_t reg_freq,
+        uint16_t reg_patch,
+        uint16_t reg_volume,
+        uint8_t reg_sustain,
+        uint8_t kl,     // 0-3   key scale level
+        bool    eg,     // 0-1
+        uint8_t tl,     // 0-63  volume (total level)
+        uint8_t rr,     // 0-15
+        bool    kr,     // 0-1   key scale of rate
+        // Out
+        bool &kflag,    // 1 bit, key
+        uint16_t &fnum, // 9 bits, F-Number
+        uint8_t &blk,   // 3 bits, Block
+        uint8_t &kll,
+        uint8_t &tll,
+        uint8_t &rks,   // 4 bits - Rate-KeyScale
+        uint8_t &rrr    // 4 bits - Release Rate
+    )
+{
+    // Updating rhythm status and key flag
+    kflag = false;
+    if (rhythm && slot >= 12) {
+        switch (slot) {
+            case 12: //BD1
+            case 13: //BD2
+                kflag = (reg_flags >> 4) & 1;
+                break;
+            case 14: // HH
+                kflag = (reg_flags >> 0) & 1;
+                break;
+            case 15: // SD
+                kflag = (reg_flags >> 3) & 1;
+                break;
+            case 16: // TOM
+                kflag = (reg_flags >> 2) & 1;
+                break;
+            case 17: // CYM
+                kflag = (reg_flags >> 1) & 1;
+                break;
+            default:
+                break;
+        }
+    }
+    if (reg_key) {
+        kflag = true;
+    }
+
+    // calculate key-scale attenuation amount (controller.vhd)
+    fnum = reg_freq & 0x1ff; // 9 bits, F-Number
+    blk = reg_freq >> 9; // 3 bits, Block
+    
+    kll = ( kl_table[(fnum >> 5) & 15] - ((7 - blk) << 3) ) << 1;
+    
+    if ((kll >> 7) || kl == 0) {
+        kll = 0;
+    }else{
+        kll = kll >> (3 - kl);
+    }
+    
+    // calculate base total level from volume register value (controller.vhd)
+    tll;
+    if (rhythm && (slot == 14 || slot == 16)) { // hh and tom
+        tll = reg_patch << 3;
+    }else
+    if ((slot & 1) == 0) {
+        tll = tl << 1; // mod
+    }else{
+        tll = reg_volume << 3; // car
+    }
+    
+    tll = tll + kll;
+    
+    if ((tll >> 7) != 0) {
+        tll = 0x7f;
+    }else{
+        tll = tll & 0x7f;
+    }
+    
+    // determine RKS (controller.vhd)
+    if (rhythm && slot >= 14) {
+      if (kr) {
+        rks = 5;
+      }else{
+        rks = blk >> 1;
+      }
+    }else{
+      if (kr) {
+        rks = (blk << 1) | (fnum >> 8);
+      }else{
+        rks = blk >> 1;
+      }
+    }
+    
+    // output release rate (depends on the sustine and envelope type) (controller.vhd)
+    if  (kflag) { // key on
+        if (eg) {
+            rrr = 0;
+        }else{
+            rrr = rr;
+        }
+    }else{ // key off
+        if ((slot & 1) == 0 && !(rhythm && slot >= 14)) {
+            rrr  = 0;
+        }else
+        if (reg_sustain) {
+            rrr  = 5;
+        }else
+        if (!eg) {
+            rrr  = 7;
+        }else{
+            rrr  = rr;
+        }
+    }
+}
 
 //-----------------------------------------------------------------------------------------
 //-- Envelope Generator

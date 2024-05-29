@@ -99,13 +99,6 @@ int YM2413::getPatch(unsigned instrument, bool carrier)
     return (instrument << 1) + (carrier? 1:0);
 }
 
-static const uint8_t kl_table[16] = {
-    0b000000, 0b011000, 0b100000, 0b100101,
-    0b101000, 0b101011, 0b101101, 0b101111,
-    0b110000, 0b110010, 0b110011, 0b110100,
-    0b110101, 0b110110, 0b110111, 0b111000
-}; // 0.75db/step, 6db/oct
-
 void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
 {
     assert(num != 0);
@@ -117,34 +110,6 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
 
             int cha = slotnum / 2;
 
-            // Updating rhythm status and key flag
-            bool key = false;
-            if (rhythm && slotnum >= 12) {
-                switch (slotnum) {
-                    case 12: //BD1
-                    case 13: //BD2
-                        key = (reg_flags >> 4) & 1;
-                        break;
-                    case 14: // HH
-                        key = (reg_flags >> 0) & 1;
-                        break;
-                    case 15: // SD
-                        key = (reg_flags >> 3) & 1;
-                        break;
-                    case 16: // TOM
-                        key = (reg_flags >> 2) & 1;
-                        break;
-                    case 17: // CYM
-                        key = (reg_flags >> 1) & 1;
-                        break;
-                    default:
-                        break;
-                }
-            }
-            if (reg_key[slotnum/2]) {
-                key = true;
-            }
-
             // select instrument
             Patch *pat;
             if (rhythm && cha >= 6) {
@@ -153,103 +118,58 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
                 pat = &patch[reg_patch[cha]*2 + (slotnum & 1)];
             }
 
+            // Controller
+            // ----------
+
             uint8_t kl = pat->kl;   // 0-3   key scale level
             bool    eg = pat->eg;   // 0-1
             uint8_t tl = pat->tl;   // 0-63  volume (total level)
             uint8_t rr = pat->rr;   // 0-15
             bool    kr = pat->kr;   // 0-1   key scale of rate
 
-            // calculate key-scale attenuation amount (controller.vhd)
-            uint16_t fnum = reg_freq[cha] & 0x1ff; // 9 bits, F-Number
-            uint8_t blk = reg_freq[cha] >> 9; // 3 bits, Block
-
-            uint8_t kll = ( kl_table[(fnum >> 5) & 15] - ((7 - blk) << 3) ) << 1;
-            
-            if ((kll >> 7) || kl == 0) {
-                kll = 0;
-            }else{
-                kll = kll >> (3 - kl);
-            }
-            
-            // calculate base total level from volume register value (controller.vhd)
+            bool kflag;
+            uint16_t fnum;
+            uint8_t blk;  // 3 bits, Block
+            uint8_t kll;
             uint8_t tll;
-            if (rhythm && (slotnum == 14 || slotnum == 16)) { // hh and tom
-                tll = reg_patch[cha] << 3;
-            }else
-            if ((slotnum & 1) == 0) {
-                tll = tl << 1; // mod
-            }else{
-                tll = reg_volume[cha] << 3; // car
-            }
-            
-            tll = tll + kll;
-
-            if ((tll >> 7) != 0) {
-                tll = 0x7f;
-            }else{
-                tll = tll & 0x7f;
-            }
-
-            // determine RKS (controller.vhd)
-            uint8_t rks; // 4 bits - Rate-KeyScale
-            if (rhythm && slotnum >= 14) {
-              if (kr) {
-                rks = 5;
-              }else{
-                rks = blk >> 1;
-              }
-            }else{
-              if (kr) {
-                rks = (blk << 1) | (fnum >> 8);
-              }else{
-                rks = blk >> 1;
-              }
-            }
-
-            // output release rate (depends on the sustine and envelope type) (controller.vhd)
+            uint8_t rks;  // 4 bits - Rate-KeyScale
             uint8_t rrr;  // 4 bits - Release Rate
-            if  (key) { // key on
-                if (eg) {
-                    rrr = 0;
-                }else{
-                    rrr = rr;
-                }
-            }else{ // key off
-                if ((slotnum & 1) == 0 && !(rhythm && cha >= 7)) {
-                    rrr  = 0;
-                }else
-                if (reg_sustain[cha]) {
-                    rrr  = 5;
-                }else
-                if (!eg) {
-                    rrr  = 7;
-                }else{
-                    rrr  = rr;
-                }
-            }
+            
+            slot.vm2413Controller(rhythm, reg_flags, reg_key[cha],
+                reg_freq[cha], reg_patch[cha], reg_volume[cha], reg_sustain[cha],
+                kl, eg, tl, rr, kr, kflag, fnum, blk, kll, tll, rks, rrr);
+
 
             // EnvelopeGenerator
+            // -----------------
+
             uint8_t ar  = pat->ar;  // 0-15  attack rate
             uint8_t dr  = pat->dr;  // 0-15  decay rate
             uint8_t sl  = pat->sl;  // 0-15  sustain level
             bool am = pat->am;      // 0-1
             uint16_t egout;
-            slot.vm2413EnvelopeGenerator(tll, rks, rrr, ar, dr, sl, am, key, rhythm, egout);
+            slot.vm2413EnvelopeGenerator(tll, rks, rrr, ar, dr, sl, am, kflag, rhythm, egout);
 
             // PhaseGenerator
+            // --------------
+
             bool pm = pat->pm;      // 0-1
             uint8_t ml = pat->ml;   // 0-15  frequency multiplier factor
             bool noise;
             uint32_t pgout; // 18 bits
-            slot.vm2413PhaseGenerator(pm, ml, blk, fnum, key, rhythm, noise, pgout);
+            slot.vm2413PhaseGenerator(pm, ml, blk, fnum, kflag, rhythm, noise, pgout);
 
             // Operator
+            // --------
+
             bool wf = pat->wf;      // 0-1   waveform
             uint8_t fb = pat->fb;   // 0,1-7 amount of feedback
             uint16_t opout;
             slot.vm2413Operator(rhythm, noise, wf, fb, pgout, egout, opout);
 
             // OutputGenerator
+            // ---------------
+
             slot.vm2413OutputGenerator(opout);
         }
 

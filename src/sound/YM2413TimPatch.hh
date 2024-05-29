@@ -22,7 +22,7 @@ public:
     uint8_t fb = 0;    // 0,1-7 amount of feedback
     uint8_t kl = 0;    // 0-3   key scale level
     uint8_t sl = 0;    // 0-15  sustain level
-    bool kr = 0;       // 0-1   key scale of rate
+    bool kr = false;   // 0-1   key scale of rate
     uint8_t ml = 0;    // 0-15  frequency multiplier factor
     uint8_t tl = 0;    // 0-63  volume (total level)
     bool am = false;   // 0-1
