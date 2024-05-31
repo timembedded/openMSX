@@ -862,6 +862,8 @@
     <ClCompile Include="$(OpenMSXSrcDir)\SVIPrinterPort.cc" />
     <ClCompile Include="$(OpenMSXSrcDir)\SVIPPI.cc" />
     <ClCompile Include="$(OpenMSXSrcDir)\MSXCielTurbo.cc" />
+    <ClCompile Include="..\..\src\sound\Y8950Tim.cc" />
+    <ClCompile Include="..\..\src\sound\Y8950TimAdpcm.cc" />
     <ClCompile Include="..\..\src\sound\YM2413Tim.cc" />
     <ClCompile Include="..\..\src\sound\YM2413TimPatch.cc" />
     <ClCompile Include="..\..\src\sound\YM2413TimSlot.cc" />
@@ -1637,6 +1639,8 @@ popd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(OpenMSXSrcDir)\sound\fake_windows.h" />
+    <ClInclude Include="..\..\src\sound\Y8950Tim.hh" />
+    <ClInclude Include="..\..\src\sound\Y8950TimAdpcm.hh" />
     <ClInclude Include="..\..\src\sound\YM2413Tim.hh" />
     <ClInclude Include="..\..\src\sound\YM2413TimCommon.hh" />
   </ItemGroup>

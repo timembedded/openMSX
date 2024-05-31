@@ -49,12 +49,14 @@ static constexpr std::array inst_data = {
 };
 
 YM2413::YM2413() :
-    slot(Slot::instance())
+    slot(18)
 {
-    ranges::fill(reg_instr, 0); // avoid UMR
-    ranges::fill(reg_freq, 0); // avoid UMR
-    ranges::fill(reg_patch, 0); // avoid UMR
-    ranges::fill(reg_volume, 0); // avoid UMR
+    ranges::fill(reg_instr, 0);
+    ranges::fill(reg_freq, 0);
+    ranges::fill(reg_patch, 0);
+    ranges::fill(reg_volume, 0);
+    ranges::fill(reg_key, 0);
+    ranges::fill(reg_sustain, 0);
 
     for (auto i : xrange(16 + 3)) {
         patch[i<<1].reset();
@@ -99,6 +101,13 @@ int YM2413::getPatch(unsigned instrument, bool carrier)
     return (instrument << 1) + (carrier? 1:0);
 }
 
+static const uint8_t kl_table[16] = {
+    0b000000, 0b011000, 0b100000, 0b100101,
+    0b101000, 0b101011, 0b101101, 0b101111,
+    0b110000, 0b110010, 0b110011, 0b110100,
+    0b110101, 0b110110, 0b110111, 0b111000
+}; // 0.75db/step, 6db/oct
+
 void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
 {
     assert(num != 0);
@@ -134,10 +143,39 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
             uint8_t tll;
             uint8_t rks;  // 4 bits - Rate-KeyScale
             uint8_t rrr;  // 4 bits - Release Rate
+
+            // calculate key-scale attenuation amount (controller.vhd)
+            fnum = reg_freq[cha] & 0x1ff; // 9 bits, F-Number
+            blk = reg_freq[cha] >> 9; // 3 bits, Block
             
-            slot.vm2413Controller(rhythm, reg_flags, reg_key[cha],
-                reg_freq[cha], reg_patch[cha], reg_volume[cha], reg_sustain[cha],
-                kl, eg, tl, rr, kr, kflag, fnum, blk, kll, tll, rks, rrr);
+            kll = ( kl_table[(fnum >> 5) & 15] - ((7 - blk) << 3) ) << 1;
+            
+            if ((kll >> 7) || kl == 0) {
+                kll = 0;
+            }else{
+                kll = kll >> (3 - kl);
+            }
+            
+            // calculate base total level from volume register value (controller.vhd)
+            if (rhythm && (slotnum == 14 || slotnum == 16)) { // hh and tom
+                tll = reg_patch[cha] << 3;
+            }else
+            if ((slotnum & 1) == 0) {
+                tll = tl << 1; // mod
+            }else{
+                tll = reg_volume[cha] << 3; // car
+            }
+            
+            tll = tll + kll;
+            
+            if ((tll >> 7) != 0) {
+                tll = 0x7f;
+            }else{
+                tll = tll & 0x7f;
+            }
+
+            slot.vm2413Controller(rhythm, reg_flags, reg_key[cha], reg_sustain[cha],
+                eg, rr, kr, fnum, blk, kflag, rks, rrr);
 
 
             // EnvelopeGenerator

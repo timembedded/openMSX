@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "YM2413TimPatch.hh"
+#include <stdint.h>
 
 namespace openmsx {
 namespace YM2413Tim {
@@ -15,13 +15,9 @@ namespace YM2413Tim {
 // Slot
 //
 class Slot {
-protected:
-    Slot();
-    static Slot _instance;
-
 public:
-    void operator=(const Slot &) = delete;
-    static Slot& instance() { return _instance; }
+    Slot(int slots);
+    virtual ~Slot();
 
     void reset();
 
@@ -71,8 +67,9 @@ public:
         SignedLiType fdata;
         SignedLiType li_data;
     };
-    SlotData slotData[18];
-    SlotData *sd = slotData;
+    SlotData *slotData;
+    SlotData *sd;
+    int numSlotData;
     int slot;
 
     // VM2413 Envelope Generator
@@ -89,21 +86,14 @@ public:
         bool rhythm,
         uint8_t reg_flags,
         uint8_t reg_key,
-        uint16_t reg_freq,
-        uint16_t reg_patch,
-        uint16_t reg_volume,
         uint8_t reg_sustain,
-        uint8_t kl,     // 0-3   key scale level
         bool    eg,     // 0-1
-        uint8_t tl,     // 0-63  volume (total level)
         uint8_t rr,     // 0-15
         bool    kr,     // 0-1   key scale of rate
+        uint16_t fnum,  // 9 bits, F-Number
+        uint8_t blk,    // 3 bits, Block
         // Out
         bool &kflag,    // 1 bit, key
-        uint16_t &fnum, // 9 bits, F-Number
-        uint8_t &blk,   // 3 bits, Block
-        uint8_t &kll,
-        uint8_t &tll,
         uint8_t &rks,   // 4 bits - Rate-KeyScale
         uint8_t &rrr    // 4 bits - Release Rate
     );

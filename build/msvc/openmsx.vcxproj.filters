@@ -1476,6 +1476,12 @@
     <ClCompile Include="..\..\src\sound\YM2413TimPatch.cc">
       <Filter>sound</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\sound\Y8950Tim.cc">
+      <Filter>sound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\sound\Y8950TimAdpcm.cc">
+      <Filter>sound</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(OpenMSXSrcDir)\cassette\CasImage.hh">
@@ -3122,6 +3128,12 @@
       <Filter>sound</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\sound\YM2413TimCommon.hh">
+      <Filter>sound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\sound\Y8950Tim.hh">
+      <Filter>sound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\sound\Y8950TimAdpcm.hh">
       <Filter>sound</Filter>
     </ClInclude>
   </ItemGroup>

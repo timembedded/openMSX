@@ -2,6 +2,7 @@
 
 #include "YM2413Core.hh"
 #include "YM2413TimSlot.hh"
+#include "YM2413TimPatch.hh"
 #include "serialize_meta.hh"
 #include <array>
 #include <span>
@@ -34,7 +35,7 @@ private:
 
 private:
     /** Channel & Slot */
-    Slot &slot;
+    Slot slot;
 
     /** Pitch Modulator */
     unsigned pm_phase;

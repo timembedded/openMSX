@@ -1,8 +1,14 @@
 #ifndef MSXAUDIO_HH
 #define MSXAUDIO_HH
 
+#define USE_CUSTOM_MSX_AUDIO 1
+
 #include "MSXDevice.hh"
+#if USE_CUSTOM_MSX_AUDIO
+#include "Y8950Tim.hh"
+#else
 #include "Y8950.hh"
+#endif
 #include <memory>
 #include <string>
 
@@ -41,7 +47,11 @@ private:
 
 private:
 	std::unique_ptr<Y8950Periphery> periphery; // polymorphic
+#if USE_CUSTOM_MSX_AUDIO
+	Y8950Tim y8950;
+#else
 	Y8950 y8950;
+#endif
 	std::unique_ptr<DACSound8U> dac; // can be nullptr
 	byte registerLatch;
 	byte dacValue = 0x80;

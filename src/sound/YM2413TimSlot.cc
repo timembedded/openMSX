@@ -23,14 +23,19 @@
 namespace openmsx {
 namespace YM2413Tim {
 
-Slot Slot::_instance;
-
 //
 // Slot
 //
 
-Slot::Slot()
+Slot::Slot(int slots)
 {
+    numSlotData = slots;
+    slotData = new(SlotData[numSlotData]);
+}
+
+Slot::~Slot()
+{
+    delete[] slotData;
 }
 
 void Slot::reset()
@@ -49,7 +54,7 @@ void Slot::reset()
 
 void Slot::select(int num)
 {
-    assert(num < (int)(sizeof(slotData)/sizeof(slotData[0])));
+    assert(num < numSlotData);
     slot = num;
     sd = &slotData[num];
 }
@@ -58,33 +63,19 @@ void Slot::select(int num)
 //-- Controller
 //-----------------------------------------------------------------------------------------
 
-static const uint8_t kl_table[16] = {
-    0b000000, 0b011000, 0b100000, 0b100101,
-    0b101000, 0b101011, 0b101101, 0b101111,
-    0b110000, 0b110010, 0b110011, 0b110100,
-    0b110101, 0b110110, 0b110111, 0b111000
-}; // 0.75db/step, 6db/oct
-
 void Slot::vm2413Controller(
         // In
         bool rhythm,
         uint8_t reg_flags,
         uint8_t reg_key,
-        uint16_t reg_freq,
-        uint16_t reg_patch,
-        uint16_t reg_volume,
         uint8_t reg_sustain,
-        uint8_t kl,     // 0-3   key scale level
         bool    eg,     // 0-1
-        uint8_t tl,     // 0-63  volume (total level)
         uint8_t rr,     // 0-15
         bool    kr,     // 0-1   key scale of rate
+        uint16_t fnum,  // 9 bits, F-Number
+        uint8_t blk,    // 3 bits, Block
         // Out
         bool &kflag,    // 1 bit, key
-        uint16_t &fnum, // 9 bits, F-Number
-        uint8_t &blk,   // 3 bits, Block
-        uint8_t &kll,
-        uint8_t &tll,
         uint8_t &rks,   // 4 bits - Rate-KeyScale
         uint8_t &rrr    // 4 bits - Release Rate
     )
@@ -117,37 +108,6 @@ void Slot::vm2413Controller(
         kflag = true;
     }
 
-    // calculate key-scale attenuation amount (controller.vhd)
-    fnum = reg_freq & 0x1ff; // 9 bits, F-Number
-    blk = reg_freq >> 9; // 3 bits, Block
-    
-    kll = ( kl_table[(fnum >> 5) & 15] - ((7 - blk) << 3) ) << 1;
-    
-    if ((kll >> 7) || kl == 0) {
-        kll = 0;
-    }else{
-        kll = kll >> (3 - kl);
-    }
-    
-    // calculate base total level from volume register value (controller.vhd)
-    tll;
-    if (rhythm && (slot == 14 || slot == 16)) { // hh and tom
-        tll = reg_patch << 3;
-    }else
-    if ((slot & 1) == 0) {
-        tll = tl << 1; // mod
-    }else{
-        tll = reg_volume << 3; // car
-    }
-    
-    tll = tll + kll;
-    
-    if ((tll >> 7) != 0) {
-        tll = 0x7f;
-    }else{
-        tll = tll & 0x7f;
-    }
-    
     // determine RKS (controller.vhd)
     if (rhythm && slot >= 14) {
       if (kr) {
