@@ -388,8 +388,7 @@ void Slot::vm2413PhaseGenerator(
     if (!sd->vm2413phase.pg_lastkey && key && (!rhythm || (slot != 14 && slot != 17))) {
         sd->vm2413phase.pg_phase = 0;
     }else{
-        sd->vm2413phase.pg_phase = sd->vm2413phase.pg_phase + dphase;
-        //assert((sd->vm2413phase.pg_phase & ~0x3ffff) == 0); // check 18-bits
+        sd->vm2413phase.pg_phase = (sd->vm2413phase.pg_phase + dphase) & 0x3ffff;
     }
     sd->vm2413phase.pg_lastkey = key;
 }
