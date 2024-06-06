@@ -31,6 +31,11 @@ Slot::Slot(int slots)
 {
     numSlotData = slots;
     slotData = new(SlotData[numSlotData]);
+    for (int i = 0; i < numSlotData; i++) {
+        select(i);
+        reset();
+    }
+    select(0);
 }
 
 Slot::~Slot()
@@ -384,6 +389,7 @@ void Slot::vm2413PhaseGenerator(
         sd->vm2413phase.pg_phase = 0;
     }else{
         sd->vm2413phase.pg_phase = sd->vm2413phase.pg_phase + dphase;
+        //assert((sd->vm2413phase.pg_phase & ~0x3ffff) == 0); // check 18-bits
     }
     sd->vm2413phase.pg_lastkey = key;
 }
@@ -489,7 +495,6 @@ void Slot::vm2413Operator(
         uint16_t &opout  // 14 bits
     )
 {
-    static uint16_t faddr; // 9 bits
     SignedLiType fdata; // 9 bits
     uint32_t addr; // 18 bits
     uint16_t data; // 14 bits
@@ -499,16 +504,7 @@ void Slot::vm2413Operator(
     uint32_t w_modula; // 20 bits
 
     // Get feedback data
-    fdata = slotData[faddr].fdata;
-
-    // Determine feedback memory address (for next cycle)
-    if (slot & 1) {
-        if( slot / 2 == 8 ) {
-            faddr = 0; // Wrap-around to 0
-        }else{
-            faddr = slot / 2 + 1;  // Because it is the address of the next modulator +1
-        }
-    }
+    fdata = slotData[slot/2].fdata;
 
     w_is_carrier = slot & 1;
     w_modula_m   = (fb == 0)? 0 : ((fdata.value << 10) >> (fb ^ 7));
