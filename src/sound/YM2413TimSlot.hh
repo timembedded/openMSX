@@ -7,6 +7,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <vector>
 
 namespace openmsx {
 namespace YM2413Tim {
@@ -31,6 +32,11 @@ public:
 
     template<typename Archive>
     void serialize(Archive& ar, unsigned version);
+
+    struct SignedDbType {
+        uint8_t value; // 7 bits
+        bool sign;
+    };
 
     struct SignedLiType {
         uint16_t value; // 9 bits
@@ -66,8 +72,9 @@ public:
         // VM2413 OutputGenerator (per channel)
         SignedLiType fdata;
         SignedLiType li_data;
+        int output;
     };
-    SlotData *slotData;
+    std::vector<SlotData> slotData;
     SlotData *sd;
     int numSlotData;
     int slot;
@@ -79,7 +86,7 @@ public:
     };
     vm2413EnvelopeCommon vm2413env;
     int16_t attack_multiply(uint8_t i0, int8_t i1);
-    uint16_t attack_table(uint32_t addr);
+    uint8_t attack_table(uint8_t addr);
 
     void vm2413Controller(
         // In
@@ -108,7 +115,7 @@ public:
         bool am,
         bool key,
         bool rhythm,
-        uint16_t &egout // 13 bits
+        uint8_t &egout // 7 bits
     );
 
     // VM2413 Phase Generator
@@ -127,13 +134,13 @@ public:
         bool key, // 1 bit
         bool rhythm, // 1 bit
         bool &noise,
-        uint32_t &pgout // 18 bits
+        uint16_t &pgout // 9 bits
     );
 
     void vm2413SineTable(
         bool wf,
-        uint32_t addr, // 18 bits, integer part 9bit, decimal part 9bit
-        uint16_t &data // 14 bits, integer part 8bit, decimal part 6bit
+        uint16_t addr, // 9 bits
+        SignedDbType &data // 7 bits  + sign
     );
 
     void vm2413Operator(
@@ -141,13 +148,13 @@ public:
         bool noise,
         bool wf,
         uint8_t fb,  // 3 bits , Feedback
-        uint32_t pgout, // 18 bits
-        uint16_t egout, // 13 bits
-        uint16_t &opout  // 14 bits
+        uint16_t pgout, // 9 bits
+        uint8_t egout, // 7 bits
+        SignedDbType &opout  // 7 bits + sign
     );
 
     void vm2413LinearTable(
-        uint32_t addr,        // 14 bits, integer part 8bit, decimal part 6bit
+        SignedDbType addr,
         SignedLiType &data
         );
 
@@ -158,7 +165,7 @@ public:
         );
 
     void vm2413OutputGenerator(
-        uint16_t opout // 14 bits
+        SignedDbType opout  // 7 bits + sign
     );
 
     int vm2413GetOutput(int slotnum);

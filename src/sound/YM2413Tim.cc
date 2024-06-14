@@ -65,6 +65,9 @@ YM2413::YM2413() :
         patch[(i<<1)+1].initCarrier(inst_data[i]);
     }
 
+    // Fix for error in voice data for SD
+    patch[35].ml = 2;
+
     reset();
 }
 
@@ -121,8 +124,8 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
 
             // select instrument
             Patch *pat;
-            if (rhythm && cha >= 6) {
-                pat = &patch[slotnum + 20];
+            if (rhythm && slotnum >= 12) {
+                pat = &patch[slotnum - 12 + 32];
             }else{
                 pat = &patch[reg_patch[cha]*2 + (slotnum & 1)];
             }
@@ -146,7 +149,7 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
 
             // calculate key-scale attenuation amount (controller.vhd)
             fnum = reg_freq[cha] & 0x1ff; // 9 bits, F-Number
-            blk = reg_freq[cha] >> 9; // 3 bits, Block
+            blk = (reg_freq[cha] >> 9) & 7; // 3 bits, Block
             
             kll = ( kl_table[(fnum >> 5) & 15] - ((7 - blk) << 3) ) << 1;
             
@@ -185,7 +188,7 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
             uint8_t dr  = pat->dr;  // 0-15  decay rate
             uint8_t sl  = pat->sl;  // 0-15  sustain level
             bool am = pat->am;      // 0-1
-            uint16_t egout;
+            uint8_t egout;          // output 7 bits
             slot.vm2413EnvelopeGenerator(tll, rks, rrr, ar, dr, sl, am, kflag, rhythm, egout);
 
             // PhaseGenerator
@@ -194,7 +197,7 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
             bool pm = pat->pm;      // 0-1
             uint8_t ml = pat->ml;   // 0-15  frequency multiplier factor
             bool noise;
-            uint32_t pgout; // 18 bits
+            uint16_t pgout; // 9 bits
             slot.vm2413PhaseGenerator(pm, ml, blk, fnum, kflag, rhythm, noise, pgout);
 
             // Operator
@@ -202,7 +205,7 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
 
             bool wf = pat->wf;      // 0-1   waveform
             uint8_t fb = pat->fb;   // 0,1-7 amount of feedback
-            uint16_t opout;
+            Slot::SignedDbType opout;
             slot.vm2413Operator(rhythm, noise, wf, fb, pgout, egout, opout);
 
             // OutputGenerator
@@ -213,7 +216,7 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
 
         // Music channels
         for (int i = 0; i < ((rhythm)? 6:9); i++) {
-            bufs[i][sample] += narrow_cast<float>(slot.vm2413GetOutput(i*2+1));
+            bufs[i][sample] += narrow_cast<float>(slot.vm2413GetOutput(i*2+1)) / 2;
         }
         // Drum channels
         if (rhythm) {
@@ -221,13 +224,13 @@ void YM2413::generateChannels(std::span<float*, 9 + 5> bufs, unsigned num)
             bufs[7] = nullptr;
             bufs[8] = nullptr;
 
-            bufs[9][sample] += narrow_cast<float>(slot.vm2413GetOutput(13) * 2); // BD
-            bufs[10][sample] += narrow_cast<float>(slot.vm2413GetOutput(14) * 2); // HH
-            bufs[11][sample] += narrow_cast<float>(slot.vm2413GetOutput(15) * 2); // SD
-            bufs[12][sample] += narrow_cast<float>(slot.vm2413GetOutput(16) * 2); // TOM
-            bufs[13][sample] += narrow_cast<float>(slot.vm2413GetOutput(17) * 2); // CYM
+            bufs[9][sample]  += narrow_cast<float>(slot.vm2413GetOutput(13)); // BD
+            bufs[10][sample] -= narrow_cast<float>(slot.vm2413GetOutput(15)); // SD
+            bufs[11][sample] -= narrow_cast<float>(slot.vm2413GetOutput(17)); // CYM
+            bufs[12][sample] += narrow_cast<float>(slot.vm2413GetOutput(14)); // HH
+            bufs[13][sample] += narrow_cast<float>(slot.vm2413GetOutput(16)); // TOM
         }else{
-            bufs[9] = nullptr;
+            bufs[9]  = nullptr;
             bufs[10] = nullptr;
             bufs[11] = nullptr;
             bufs[12] = nullptr;

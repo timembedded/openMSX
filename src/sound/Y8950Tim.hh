@@ -106,6 +106,7 @@ private:
         uint8_t dr = 0; // 0-15
         uint8_t sl = 0; // 0-15
         uint8_t rr = 0; // 0-15
+        uint8_t alg = 0; // 0,1 (0=FM, 1=AM)
     };
 
     class Channel {

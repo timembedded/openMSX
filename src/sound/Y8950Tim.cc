@@ -218,7 +218,7 @@ void Y8950Tim::generateChannels(std::span<float*> bufs, unsigned num)
             uint8_t dr  = pat->dr;  // 0-15  decay rate
             uint8_t sl  = pat->sl;  // 0-15  sustain level
             bool am = pat->am;      // 0-1
-            uint16_t egout;
+            uint8_t egout;
             slot.vm2413EnvelopeGenerator(tll, rks, rrr, ar, dr, sl, am, kflag, rhythm, egout);
 
             // PhaseGenerator
@@ -227,7 +227,7 @@ void Y8950Tim::generateChannels(std::span<float*> bufs, unsigned num)
             bool pm = pat->pm;      // 0-1
             uint8_t ml = pat->ml;   // 0-15  frequency multiplier factor
             bool noise;
-            uint32_t pgout; // 18 bits
+            uint16_t pgout; // 9 bits
             slot.vm2413PhaseGenerator(pm, ml, blk, fnum, kflag, rhythm, noise, pgout);
 
             // Operator
@@ -235,7 +235,7 @@ void Y8950Tim::generateChannels(std::span<float*> bufs, unsigned num)
 
             bool wf = false;
             uint8_t fb = pat->fb;   // 0,1-7 amount of feedback
-            uint16_t opout;
+            YM2413Tim::Slot::SignedDbType opout;
             slot.vm2413Operator(rhythm, noise, wf, fb, pgout, egout, opout);
 
             // OutputGenerator
@@ -473,7 +473,7 @@ void Y8950Tim::writeReg(uint8_t rg, uint8_t data, EmuTime::param time)
         int c = rg - 0xC0;
         Patch &p = patch[c*2+MOD];
         p.fb = (data >> 1) & 7;
-        //ch[c].alg = data & 1; // TODO: Add support for 'amplitude modulation' algorithm
+        p.alg = data & 1; // TODO: Add support for 'amplitude modulation' algorithm
         assert((data & 1)==0); // only support alg==0
         reg[rg] = data;
     }

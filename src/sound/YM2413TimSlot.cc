@@ -27,10 +27,10 @@ namespace YM2413Tim {
 // Slot
 //
 
-Slot::Slot(int slots)
+Slot::Slot(int slots) :
+    slotData(slots)
 {
     numSlotData = slots;
-    slotData = new(SlotData[numSlotData]);
     for (int i = 0; i < numSlotData; i++) {
         select(i);
         reset();
@@ -40,7 +40,6 @@ Slot::Slot(int slots)
 
 Slot::~Slot()
 {
-    delete[] slotData;
 }
 
 void Slot::reset()
@@ -155,54 +154,27 @@ void Slot::vm2413Controller(
 //-----------------------------------------------------------------------------------------
 
 static const uint8_t ar_adjust_array[128] = {
-    0b0000000, 0b0000000, 0b0000000, 0b0000000, 0b0000000, 0b0000001, 0b0000001, 0b0000001,
-    0b0000001, 0b0000001, 0b0000010, 0b0000010, 0b0000010, 0b0000010, 0b0000011, 0b0000011,
-    0b0000011, 0b0000011, 0b0000100, 0b0000100, 0b0000100, 0b0000100, 0b0000100, 0b0000101,
-    0b0000101, 0b0000101, 0b0000110, 0b0000110, 0b0000110, 0b0000110, 0b0000111, 0b0000111,
-    0b0000111, 0b0000111, 0b0001000, 0b0001000, 0b0001000, 0b0001001, 0b0001001, 0b0001001,
-    0b0001001, 0b0001010, 0b0001010, 0b0001010, 0b0001011, 0b0001011, 0b0001011, 0b0001100,
-    0b0001100, 0b0001100, 0b0001101, 0b0001101, 0b0001101, 0b0001110, 0b0001110, 0b0001110,
-    0b0001111, 0b0001111, 0b0001111, 0b0010000, 0b0010000, 0b0010001, 0b0010001, 0b0010001,
-    0b0010010, 0b0010010, 0b0010011, 0b0010011, 0b0010100, 0b0010100, 0b0010101, 0b0010101,
-    0b0010101, 0b0010110, 0b0010110, 0b0010111, 0b0010111, 0b0011000, 0b0011000, 0b0011001,
-    0b0011010, 0b0011010, 0b0011011, 0b0011011, 0b0011100, 0b0011101, 0b0011101, 0b0011110,
-    0b0011110, 0b0011111, 0b0100000, 0b0100001, 0b0100001, 0b0100010, 0b0100011, 0b0100100,
-    0b0100100, 0b0100101, 0b0100110, 0b0100111, 0b0101000, 0b0101001, 0b0101010, 0b0101011,
-    0b0101100, 0b0101101, 0b0101111, 0b0110000, 0b0110001, 0b0110011, 0b0110100, 0b0110110,
-    0b0111000, 0b0111001, 0b0111011, 0b0111101, 0b1000000, 0b1000010, 0b1000101, 0b1001000,
-    0b1001011, 0b1010000, 0b1010100, 0b1011010, 0b1100010, 0b1101100, 0b1110101, 0b1111111
+    0b1111111, 0b1111111, 0b1101100, 0b1100010, 0b1011010, 0b1010100, 0b1010000, 0b1001011,
+    0b1001000, 0b1000101, 0b1000010, 0b1000000, 0b0111101, 0b0111011, 0b0111001, 0b0111000,
+    0b0110110, 0b0110100, 0b0110011, 0b0110001, 0b0110000, 0b0101111, 0b0101101, 0b0101100,
+    0b0101011, 0b0101010, 0b0101001, 0b0101000, 0b0100111, 0b0100110, 0b0100101, 0b0100100,
+    0b0100100, 0b0100011, 0b0100010, 0b0100001, 0b0100001, 0b0100000, 0b0011111, 0b0011110,
+    0b0011110, 0b0011101, 0b0011101, 0b0011100, 0b0011011, 0b0011011, 0b0011010, 0b0011010,
+    0b0011001, 0b0011000, 0b0011000, 0b0010111, 0b0010111, 0b0010110, 0b0010110, 0b0010101,
+    0b0010101, 0b0010101, 0b0010100, 0b0010100, 0b0010011, 0b0010011, 0b0010010, 0b0010010,
+    0b0010001, 0b0010001, 0b0010001, 0b0010000, 0b0010000, 0b0001111, 0b0001111, 0b0001111,
+    0b0001110, 0b0001110, 0b0001110, 0b0001101, 0b0001101, 0b0001101, 0b0001100, 0b0001100,
+    0b0001100, 0b0001011, 0b0001011, 0b0001011, 0b0001010, 0b0001010, 0b0001010, 0b0001001,
+    0b0001001, 0b0001001, 0b0001001, 0b0001000, 0b0001000, 0b0001000, 0b0000111, 0b0000111,
+    0b0000111, 0b0000111, 0b0000110, 0b0000110, 0b0000110, 0b0000110, 0b0000101, 0b0000101,
+    0b0000101, 0b0000100, 0b0000100, 0b0000100, 0b0000100, 0b0000100, 0b0000011, 0b0000011,
+    0b0000011, 0b0000011, 0b0000010, 0b0000010, 0b0000010, 0b0000010, 0b0000001, 0b0000001,
+    0b0000001, 0b0000001, 0b0000001, 0b0000000, 0b0000000, 0b0000000, 0b0000000, 0b0000000
 };
 
-int16_t Slot::attack_multiply(uint8_t i0, int8_t i1)
+uint8_t Slot::attack_table(uint8_t addr /* 7 bits */)
 {
-    return ((uint16_t)i0 * (int16_t)i1) >> 2; // return 14-bit signed, 8-bit integer, 6-bit decimal
-}
-
-uint16_t Slot::attack_table(uint32_t addr /* 22 bits */) // returns 13 bits
-{
-    uint8_t w_addr1;
-    uint8_t w_addr2;
-    int8_t w_sub;
-    int16_t w_mul;
-    uint16_t w_inter;
-
-    w_addr1 = addr >> 15;
-    w_addr2 = (w_addr1 < 0xef)? w_addr1 + 1 : 0xef;
-
-    uint8_t ff_w   = (addr >> 7) & 0xff;
-    uint8_t ff_d1  = ar_adjust_array[w_addr1];
-    uint8_t ff_d2  = ar_adjust_array[w_addr2];
-
-    w_sub = ff_d2 - ff_d1;
-
-    w_mul = attack_multiply(ff_w, w_sub);
-
-    w_inter = (ff_d1 << 6) + w_mul;
-
-    assert(std::min(ff_d1, ff_d2) <= (w_inter >> 6));
-    assert(std::max(ff_d1, ff_d2) >= (w_inter >> 6));
-
-    return w_inter & 0x1fff;
+    return ar_adjust_array[0x7f - addr];
 }
 
 void Slot::vm2413EnvelopeGenerator(
@@ -215,61 +187,61 @@ void Slot::vm2413EnvelopeGenerator(
         bool am,
         bool key,
         bool rhythm,
-        uint16_t &egout // 13 bits
+        uint8_t &egout // 7 bits
     )
 {
     // Variables
     uint8_t rm = 0; // 0-31
 
-    // Noise generator
+    // Noise generator (18 bits)
     vm2413env.ntable = ((vm2413env.ntable << 1) & 0x3ffff) | ((vm2413env.ntable >> 17) ^ ((vm2413env.ntable >> 14) & 1));
     
     // Amplitude oscillator ( -4.8dB to 0dB , 3.7Hz )
-    vm2413env.amphase++;
+    vm2413env.amphase++; // 20 bits
     if ((vm2413env.amphase & 0xf8000) == 0xf8000) {
         vm2413env.amphase &= 0xffff;
     }
     
-    uint16_t egtmp = 0; // 15 bits
+    uint16_t egtmp = 0; // 9 bits, eg_phase is 23 bits
     switch (sd->vm2413env.eg_state) {
         case SlotData::EGState::Attack:
             rm = ar;
-            egtmp = (tll << 6) + attack_table(sd->vm2413env.eg_phase & 0x3fffff);
+            egtmp = tll + attack_table((sd->vm2413env.eg_phase >> 15) & 0x7f);
             break;
         case SlotData::EGState::Decay:
             rm = dr;
-            egtmp = (tll << 6) + ((sd->vm2413env.eg_phase >> 9) & 0x1fff);
+            egtmp = tll + ((sd->vm2413env.eg_phase >> 15) & 0x7f);
             break;
         case SlotData::EGState::Release:
             rm = rrr;
-            egtmp = (tll << 6) + ((sd->vm2413env.eg_phase >> 9) & 0x1fff);
+            egtmp = tll + ((sd->vm2413env.eg_phase >> 15) & 0x7f);
             break;
         case SlotData::EGState::Finish:
-            egtmp = 0x1fff;
+            egtmp = 0x7f;
             break;
     }
     
     // SD and HH
     if ((vm2413env.ntable & 1) && (slot/2)==7 && rhythm) {
-        egtmp = egtmp + 0x2000;
+        egtmp = egtmp + 0x80;
     }
 
-    // Amplitude LFO
+    // Amplitude LFO, amphase is 20 bits
     if (am) {
         if (((vm2413env.amphase >> 19) & 1) == 0) {
             // For uphill
-            egtmp = egtmp + ((vm2413env.amphase >> 9) & 0x3ff) - 0x40;
+            egtmp = egtmp + (((vm2413env.amphase >> 15) - 1) & 0x0f);
         }else{
             // For downhill
-            egtmp = egtmp + 0x3c0 - ((vm2413env.amphase >> 9) & 0x3ff);
+            egtmp = egtmp + (0x0f - ((vm2413env.amphase >> 15) & 0x0f));
         }
     }
 
     // Generate output
-    if ((egtmp >> 13) == 0) {
-        egout = egtmp & 0x1fff;
+    if (egtmp < 0x80) {
+        egout = egtmp;
     }else{
-        egout = 0x1fff;
+        egout = 0x7f;
     }
 
     if (rm != 0) {
@@ -288,7 +260,7 @@ void Slot::vm2413EnvelopeGenerator(
             case SlotData::EGState::Release:
                 sd->vm2413env.eg_dphase &= 7;
                 sd->vm2413env.eg_dphase |= 4 + (rks & 3);
-                sd->vm2413env.eg_dphase <<= (rm - 1);
+                sd->vm2413env.eg_dphase <<= ((rm - 1) & 0x0f);
                 sd->vm2413env.eg_phase = (sd->vm2413env.eg_phase + sd->vm2413env.eg_dphase) & 0x7fffff;
                 break;
             case SlotData::EGState::Finish:
@@ -305,12 +277,12 @@ void Slot::vm2413EnvelopeGenerator(
             }
             break;
         case SlotData::EGState::Decay:
-            if ((sd->vm2413env.eg_phase >> (22-4)) >= sl) {
+            if (((sd->vm2413env.eg_phase >> (22-4)) & 0x1f) >= sl) {
                 sd->vm2413env.eg_state = SlotData::EGState::Release;
             }
             break;
         case SlotData::EGState::Release:
-            if ((sd->vm2413env.eg_phase >> (22-4)) >= 15 ) {
+            if (((sd->vm2413env.eg_phase >> (22-4)) & 0x1f) >= 15 ) {
                 sd->vm2413env.eg_state = SlotData::EGState::Finish;
             }
             break;
@@ -349,19 +321,19 @@ void Slot::vm2413PhaseGenerator(
         bool key, // 1 bit
         bool rhythm, // 1 bit
         bool &noise,
-        uint32_t &pgout // 18 bits
+        uint16_t &pgout // 9 bits
     )
 {
     noise = vm2413phase.noise14 ^ vm2413phase.noise17;
-    pgout = sd->vm2413phase.pg_phase;
+    pgout = sd->vm2413phase.pg_phase >> 9;
 
     // Update pitch LFO counter when slot = 0 and stage = 0 (i.e. increment per 72 clocks)
-    if (slot == 0) {
+    if (slot == 0) { // pmcount is 13 bits
         vm2413phase.pmcount = (vm2413phase.pmcount + 1) & 0x1fff;
     }
 
-    // Delta phase
-    uint32_t dphase = ((((uint32_t)fnum * ml_table[ml]) << blk) >> 3 /* must be 2 */) & 0x3ffff; // TODO: ">> 3" corrects the tone frequency, why?
+    // Delta phase (18 bits)
+    uint32_t dphase = ((((uint32_t)fnum * ml_table[ml]) << blk) >> 2) & 0x3ffff;
 
     if (pm) {
         switch (vm2413phase.pmcount >> 11) {
@@ -398,132 +370,114 @@ void Slot::vm2413PhaseGenerator(
 //-----------------------------------------------------------------------------------------
 
 static const uint16_t sin_data[128] = {
-    0b11111111111, 0b11001010000, 0b10101010001, 0b10010111100,
-    0b10001010011, 0b10000000001, 0b01110111110, 0b01110000101,
-    0b01101010101, 0b01100101001, 0b01100000011, 0b01011100000,
-    0b01011000000, 0b01010100011, 0b01010001000, 0b01001101111,
-    0b01001011000, 0b01001000010, 0b01000101101, 0b01000011010,
-    0b01000000111, 0b00111110110, 0b00111100101, 0b00111010101,
-    0b00111000110, 0b00110110111, 0b00110101001, 0b00110011100,
-    0b00110001111, 0b00110000011, 0b00101110111, 0b00101101011,
-    0b00101100000, 0b00101010110, 0b00101001011, 0b00101000001,
-    0b00100111000, 0b00100101110, 0b00100100101, 0b00100011100,
-    0b00100010100, 0b00100001011, 0b00100000011, 0b00011111011,
-    0b00011110100, 0b00011101100, 0b00011100101, 0b00011011110,
-    0b00011010111, 0b00011010001, 0b00011001010, 0b00011000100,
-    0b00010111110, 0b00010111000, 0b00010110010, 0b00010101100,
-    0b00010100111, 0b00010100001, 0b00010011100, 0b00010010111,
-    0b00010010010, 0b00010001101, 0b00010001000, 0b00010000011,
-    0b00001111111, 0b00001111010, 0b00001110110, 0b00001110010,
-    0b00001101110, 0b00001101010, 0b00001100110, 0b00001100010,
-    0b00001011110, 0b00001011010, 0b00001010111, 0b00001010011,
-    0b00001010000, 0b00001001101, 0b00001001001, 0b00001000110,
-    0b00001000011, 0b00001000000, 0b00000111101, 0b00000111011,
-    0b00000111000, 0b00000110101, 0b00000110011, 0b00000110000,
-    0b00000101110, 0b00000101011, 0b00000101001, 0b00000100111,
-    0b00000100101, 0b00000100010, 0b00000100000, 0b00000011110,
-    0b00000011101, 0b00000011011, 0b00000011001, 0b00000010111,
-    0b00000010110, 0b00000010100, 0b00000010011, 0b00000010001,
-    0b00000010000, 0b00000001110, 0b00000001101, 0b00000001100,
-    0b00000001011, 0b00000001010, 0b00000001001, 0b00000001000,
-    0b00000000111, 0b00000000110, 0b00000000101, 0b00000000100,
-    0b00000000011, 0b00000000011, 0b00000000010, 0b00000000010,
-    0b00000000001, 0b00000000001, 0b00000000000, 0b00000000000,
-    0b00000000000, 0b00000000000, 0b00000000000, 0b00000000000
+    0b1111111, 0b1100101, 0b1010101, 0b1001100,
+    0b1000101, 0b1000000, 0b0111100, 0b0111000,
+    0b0110101, 0b0110011, 0b0110000, 0b0101110,
+    0b0101100, 0b0101010, 0b0101000, 0b0100111,
+    0b0100101, 0b0100100, 0b0100011, 0b0100001,
+    0b0100000, 0b0011111, 0b0011110, 0b0011101,
+    0b0011100, 0b0011011, 0b0011010, 0b0011010,
+    0b0011001, 0b0011000, 0b0010111, 0b0010110,
+    0b0010110, 0b0010101, 0b0010100, 0b0010100,
+    0b0010011, 0b0010011, 0b0010010, 0b0010001,
+    0b0010001, 0b0010000, 0b0010000, 0b0001111,
+    0b0001111, 0b0001110, 0b0001110, 0b0001110,
+    0b0001101, 0b0001101, 0b0001100, 0b0001100,
+    0b0001011, 0b0001011, 0b0001011, 0b0001010,
+    0b0001010, 0b0001010, 0b0001001, 0b0001001,
+    0b0001001, 0b0001000, 0b0001000, 0b0001000,
+    0b0001000, 0b0000111, 0b0000111, 0b0000111,
+    0b0000110, 0b0000110, 0b0000110, 0b0000110,
+    0b0000101, 0b0000101, 0b0000101, 0b0000101,
+    0b0000101, 0b0000100, 0b0000100, 0b0000100,
+    0b0000100, 0b0000100, 0b0000011, 0b0000011,
+    0b0000011, 0b0000011, 0b0000011, 0b0000011,
+    0b0000010, 0b0000010, 0b0000010, 0b0000010,
+    0b0000010, 0b0000010, 0b0000010, 0b0000001,
+    0b0000001, 0b0000001, 0b0000001, 0b0000001,
+    0b0000001, 0b0000001, 0b0000001, 0b0000001,
+    0b0000001, 0b0000000, 0b0000000, 0b0000000,
+    0b0000000, 0b0000000, 0b0000000, 0b0000000,
+    0b0000000, 0b0000000, 0b0000000, 0b0000000,
+    0b0000000, 0b0000000, 0b0000000, 0b0000000,
+    0b0000000, 0b0000000, 0b0000000, 0b0000000,
+    0b0000000, 0b0000000, 0b0000000, 0b0000000
 };
 
 void Slot::vm2413SineTable(
     bool wf,
-    uint32_t addr, // 18 bits, integer part 9bit, decimal part 9bit
-    uint16_t &data // 14 bits, integer part 8bit, decimal part 6bit
+    uint16_t addr,      // 9 bits
+    SignedDbType &data  // 7 bits  + sign
     )
 {
-    uint16_t ff_data0;  // 11 bits, unsigned integer part 7bit, decimal part 4bit
-    uint16_t ff_data1;  // 11 bits, unsigned integer part 7bit, decimal part 4bit
-    uint16_t w_wf;      // 14 bits
-    uint8_t w_xor;      // 7 bits
-    uint8_t w_addr0;    // 7 bits
-    uint8_t w_addr1;    // 7 bits
-    uint8_t w_xaddr;    // 7 bits
-    bool ff_sign;
-    bool ff_wf;
-    uint16_t ff_weight; // 9 bits
-    int16_t w_sub;      // 12 bits, signed integer part 8bit, decimal part 4bit
-    int16_t w_mul;      // 14 bits, signed integer part 8bit, decimal part 6bit
-    uint16_t w_inter;   // 14 bits
-
-    w_xor   = ((addr >> 16) & 1)? 0x7f : 0;
-    w_xaddr = ((addr >> 9) & 0x7f) ^ w_xor;
-    w_addr0 = w_xaddr;
-    w_addr1 = (((addr >> 9) & 0x7f) == 0x7f)? (0x7f ^ w_xor) :  //  Dealing with parts where the waveform cycles
-              ((((addr >> 9) & 0x7f) + 1) ^ w_xor);
-
-    // waveform memory
-    ff_data0 = sin_data[w_addr0];
-    ff_data1 = sin_data[w_addr1];
-
-    // Modification information delay (to match waveform memory read delay)
-    ff_sign   = addr >> 17;
-    ff_wf     = wf && (addr >> 17);
-    ff_weight = addr & 0x1ff;
-
-    //  Interpolation (*Don't worry about ff_sign as it will be 0 in places that cross the sign)
-    //  o = i0 * (1 - k) + i1 * w = i0 - w * i0 + w * i1 = i0 + w * (i1 - i0)
-    w_sub  = ff_data1 - ff_data0;
-    w_mul  = ((uint32_t)ff_weight * w_sub) >> 7;
-
-    // Subordinate 6bit (decimal part) is left to maintain calculation accuracy
-    w_inter = (ff_data0 << 2) + w_mul;   //  <<2 is digit alignment
-
-    assert(std::min(ff_data0, ff_data1) <= (w_inter >> 2));
-    assert(std::max(ff_data0, ff_data1) >= (w_inter >> 2));
-
-    w_wf    = ff_wf? 0x3fff : 0;
-
-    data    = (ff_sign? 0x2000 : 0) | (w_inter & 0x1fff) | w_wf;
+    assert(addr < 0x200);
+    if (addr < 0x80) {
+        data.sign = false;
+        data.value = sin_data[addr];
+    }else
+    if (addr < 0x100) {
+        data.sign = false;
+        data.value = sin_data[0x100 - 1 - addr];
+    }else
+    if (addr < 0x180) {
+        data.sign = true;
+        if (!wf) {
+            data.value = sin_data[addr - 0x100];
+        }else{
+            data.value = sin_data[0];
+        }
+    }else{
+        data.sign = true;
+        if (!wf) {
+            data.value = sin_data[0x200 - 1 - addr];
+        }else{
+            data.value = sin_data[0];
+        }
+    }
 }
-
 
 void Slot::vm2413Operator(
         bool rhythm,
         bool noise,
         bool wf,
         uint8_t fb,  // 3 bits , Feedback
-        uint32_t pgout, // 18 bits
-        uint16_t egout, // 13 bits
-        uint16_t &opout  // 14 bits
+        uint16_t pgout, // 9 bits
+        uint8_t egout, // 7 bits
+        SignedDbType &opout  // 7 bits + sign
     )
 {
     SignedLiType fdata; // 9 bits
-    uint32_t addr; // 18 bits
-    uint16_t data; // 14 bits
-    bool w_is_carrier;
-    uint32_t w_modula_m; // 20 bits
-    uint32_t w_modula_c; // 20 bits
-    uint32_t w_modula; // 20 bits
+    uint16_t addr; // 9 bits
+    SignedDbType data; // 7 bits + sign
 
     // Get feedback data
     fdata = slotData[slot/2].fdata;
 
-    w_is_carrier = slot & 1;
-    w_modula_m   = (fb == 0)? 0 : ((fdata.value << 10) >> (fb ^ 7));
-    w_modula_c   = fdata.value << 11;
-    w_modula     = (w_is_carrier)? w_modula_c : w_modula_m;
-    
     // Determine reference address (phase) of sine wave
-    if (rhythm && (slot == 14 || slot == 17 )) { // HH or CYM
-        addr = (noise)? 0x0fe00 : 0x2fe00;
+    if (rhythm && (slot == 14 || slot == 17)) { // HH or CYM
+        addr = (noise)? 0x7f : 0x17f;
     }else
     if (rhythm && slot == 15) { // SD
-        addr = (pgout >> 17)? 0x0fe00 : 0x2fe00;
+        addr = (pgout >> 8)? 0x7f : 0x17f;
     }else
     if (rhythm && slot == 16) { // TOM
         addr = pgout;
     }else{
-        if (!fdata.sign) {     // modula ? fdata. Since it is a value obtained by shifting the absolute value of , the sign is processed here.
-            addr = pgout + (w_modula & 0x3ffff);
+        uint16_t modula; // 11 bits
+        if (slot & 1) {
+            modula = fdata.value << 2;
         }else{
-            addr = pgout - (w_modula & 0x3ffff);
+            if (fb == 0) {
+                modula = 0;
+            }else{
+                modula = (fdata.value << 1) >> (7 - fb);
+            }
+        }
+
+        if (!fdata.sign) {
+            addr = (pgout + modula) & 0x1ff;
+        }else{
+            addr = (pgout - modula) & 0x1ff;
         }
     }
 
@@ -531,10 +485,12 @@ void Slot::vm2413Operator(
     vm2413SineTable(wf, addr, data);
 
     // The stage where data comes out from SineTable
-    if ((egout + (data & 0x1fff)) < 0x2000) {
-        opout = (data & ~0x1fff) | (egout + (data & 0x1fff));
+    uint8_t opout_buf = egout + data.value; // 8-bit
+    opout.sign = data.sign;
+    if (opout_buf < 0x80) {
+        opout.value = opout_buf;
     }else{
-        opout = data | 0x1fff;
+        opout.value = 0x7f;
     }
 }
 
@@ -578,40 +534,12 @@ static const uint16_t log2lin_data[128] = {
 };
 
 void Slot::vm2413LinearTable(
-    uint32_t addr,        // 14 bits, integer part 8bit, decimal part 6bit
+    SignedDbType addr,
     SignedLiType &data
     )
 {
-    uint16_t ff_weight; // 6 bits
-    uint16_t ff_data0;  // 9 bits
-    uint16_t ff_data1;  // 9 bits
-    uint8_t w_addr1;    // 7 bits
-    int16_t w_sub;      // 10 bits
-    int16_t w_mul;      // 10 bits
-    uint16_t w_inter;   // 10 bits
-
-    w_addr1 = (((addr >> 6) & 0x7f) != 0x7f)? (((addr >> 6) + 1) & 0x7f) : 0x7f;
-
-    // waveform memory
-    ff_data0 = log2lin_data[(addr >> 6) & 0x7f];
-    ff_data1 = log2lin_data[w_addr1];
-
-    // Modification information delay (to match waveform memory read delay)
-    data.sign = addr >> 13;
-    ff_weight = addr & 0x3f;
-
-    //  Interpolation (*Don't worry about ff_sign as it will be 0 in places that cross the sign)
-    //  o = i0 * (1 - k) + i1 * w = i0 - w * i0 + w * i1 = i0 + w * (i1 - i0)
-    w_sub  = ff_data1 - ff_data0;
-    w_mul  = ((uint32_t)ff_weight * w_sub) >> 6;
-
-    // Subordinate 6bit (decimal part) is left to maintain calculation accuracy
-    w_inter = ff_data0 + w_mul;
-
-    data.value = w_inter & 0x3ff;
-
-    assert(std::min(ff_data0, ff_data1) <= data.value);
-    assert(std::max(ff_data0, ff_data1) >= data.value);
+    data.sign = addr.sign;
+    data.value = log2lin_data[addr.value];
 }
 
 //-----------------------------------------------------------------------------------------
@@ -620,29 +548,20 @@ void Slot::vm2413LinearTable(
 
 void Slot::vm2413OutputAverage(SignedLiType L, SignedLiType R, SignedLiType &OUT)
 {
-    uint16_t vL, vR; // 11 bits
-
-    //  Sign + absolute value --> 2's complement
-    if (!L.sign) {
-        vL = L.value;
-    }else{
-        vL = (~L.value & 0x7ff) + 1;
+    if (L.sign == R.sign) {
+        OUT.sign = L.sign;
+        OUT.value = (L.value + R.value) >> 1;
     }
-    if (!R.sign) {
-        vR = R.value;
-    }else{
-        vR = (~R.value & 0x7ff) + 1;
-    }
+    else {
+        if (L.value > R.value) {
+            OUT.sign = L.sign;
+            OUT.value = (L.value - R.value) >> 1;
+        }
+        else {
+            OUT.sign = R.sign;
+            OUT.value = (R.value - L.value) >> 1;
 
-    vL = vL + vR;
-
-    //  Two's complement ? sign + absolute value, and 1/2 times. One bit is lost here
-    if ((vL & 0x400) == 0) { // positive
-        OUT.sign = false;
-        OUT.value = (vL & 0x3ff) >> 1;
-    }else{ // negative
-        OUT.sign = true;
-        OUT.value = (~(vL - 1) & 0x3ff) >> 1;
+        }
     }
 
     if (L.sign == R.sign) {
@@ -654,7 +573,7 @@ void Slot::vm2413OutputAverage(SignedLiType L, SignedLiType R, SignedLiType &OUT
 }
 
 void Slot::vm2413OutputGenerator(
-        uint16_t opout  // 14 bits
+        SignedDbType opout  // 7 bits + sign
     )
 {
     SignedLiType li_data;
@@ -683,8 +602,7 @@ int Slot::vm2413GetOutput(int slotnum)
     }
 }
 
-#define MIXER_ADD_MO(out, sample) if (!sample.sign) out += (sample.value << 1); else out -= (sample.value << 1)
-#define MIXER_ADD_RO(out, sample) if (!sample.sign) out += (sample.value << 2); else out -= (sample.value << 2)
+#define MIXER_ADD(out, sample) if (!sample.sign) out += (sample.value << 1); else out -= (sample.value << 1)
 
 void Slot::vm2413TemporalMixer(
         bool rhythm,
@@ -692,22 +610,22 @@ void Slot::vm2413TemporalMixer(
         uint16_t &ro  // 16 bits
     )
 {
-    MIXER_ADD_MO(mo, slotData[1].li_data); // CH0
-    MIXER_ADD_MO(mo, slotData[3].li_data); // CH1
-    MIXER_ADD_MO(mo, slotData[5].li_data); // CH2
-    MIXER_ADD_MO(mo, slotData[7].li_data); // CH3
-    MIXER_ADD_MO(mo, slotData[9].li_data); // CH4
-    MIXER_ADD_MO(mo, slotData[11].li_data); // CH5
+    MIXER_ADD(mo, slotData[1].li_data); // CH0
+    MIXER_ADD(mo, slotData[3].li_data); // CH1
+    MIXER_ADD(mo, slotData[5].li_data); // CH2
+    MIXER_ADD(mo, slotData[7].li_data); // CH3
+    MIXER_ADD(mo, slotData[9].li_data); // CH4
+    MIXER_ADD(mo, slotData[11].li_data); // CH5
     if (!rhythm) {
-        MIXER_ADD_MO(mo, slotData[13].li_data); // CH6
-        MIXER_ADD_MO(mo, slotData[15].li_data); // CH7
-        MIXER_ADD_MO(mo, slotData[17].li_data); // CH8
+        MIXER_ADD(mo, slotData[13].li_data); // CH6
+        MIXER_ADD(mo, slotData[15].li_data); // CH7
+        MIXER_ADD(mo, slotData[17].li_data); // CH8
     }else{
-        MIXER_ADD_RO(ro, slotData[13].li_data); // BD
-        MIXER_ADD_RO(ro, slotData[14].li_data); // HH
-        MIXER_ADD_RO(ro, slotData[15].li_data); // SD
-        MIXER_ADD_RO(ro, slotData[16].li_data); // TOM
-        MIXER_ADD_RO(ro, slotData[17].li_data); // CYM
+        MIXER_ADD(ro, slotData[13].li_data); // BD
+        MIXER_ADD(ro, slotData[14].li_data); // HH
+        MIXER_ADD(ro, slotData[15].li_data); // SD
+        MIXER_ADD(ro, slotData[16].li_data); // TOM
+        MIXER_ADD(ro, slotData[17].li_data); // CYM
     }
 }
 
