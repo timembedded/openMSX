@@ -26,27 +26,66 @@ namespace YM2413Tim {
 // YM2413
 //
 
-static constexpr std::array inst_data = {
-    std::array<uint8_t, 8>{ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }, // user instrument
-    std::array<uint8_t, 8>{ 0x61,0x61,0x1e,0x17,0xf0,0x7f,0x00,0x17 }, // violin
-    std::array<uint8_t, 8>{ 0x13,0x41,0x16,0x0e,0xfd,0xf4,0x23,0x23 }, // guitar
-    std::array<uint8_t, 8>{ 0x03,0x01,0x9a,0x04,0xf3,0xf3,0x13,0xf3 }, // piano
-    std::array<uint8_t, 8>{ 0x11,0x61,0x0e,0x07,0xfa,0x64,0x70,0x17 }, // flute
-    std::array<uint8_t, 8>{ 0x22,0x21,0x1e,0x06,0xf0,0x76,0x00,0x28 }, // clarinet
-    std::array<uint8_t, 8>{ 0x21,0x22,0x16,0x05,0xf0,0x71,0x00,0x18 }, // oboe
-    std::array<uint8_t, 8>{ 0x21,0x61,0x1d,0x07,0x82,0x80,0x17,0x17 }, // trumpet
-    std::array<uint8_t, 8>{ 0x23,0x21,0x2d,0x16,0x90,0x90,0x00,0x07 }, // organ
-    std::array<uint8_t, 8>{ 0x21,0x21,0x1b,0x06,0x64,0x65,0x10,0x17 }, // horn
-    std::array<uint8_t, 8>{ 0x21,0x21,0x0b,0x1a,0x85,0xa0,0x70,0x07 }, // synthesizer
-    std::array<uint8_t, 8>{ 0x23,0x01,0x83,0x10,0xff,0xb4,0x10,0xf4 }, // harpsichord
-    std::array<uint8_t, 8>{ 0x97,0xc1,0x20,0x07,0xff,0xf4,0x22,0x22 }, // vibraphone
-    std::array<uint8_t, 8>{ 0x61,0x00,0x0c,0x05,0xc2,0xf6,0x40,0x44 }, // synthesizer bass
-    std::array<uint8_t, 8>{ 0x01,0x01,0x56,0x03,0x94,0xc2,0x03,0x12 }, // acoustic bass
-    std::array<uint8_t, 8>{ 0x21,0x01,0x89,0x03,0xf1,0xe4,0xf0,0x23 }, // electric guitar
-    std::array<uint8_t, 8>{ 0x07,0x21,0x14,0x00,0xee,0xf8,0xff,0xf8 },
-    std::array<uint8_t, 8>{ 0x01,0x31,0x00,0x00,0xf8,0xf7,0xf8,0xf7 },
-    std::array<uint8_t, 8>{ 0x25,0x11,0x00,0x00,0xf8,0xfa,0xf8,0x55 }
+static constexpr Patch inst_data[] = {
+    // user instrument
+    {.am = false, .pm = false, .eg = false, .kr = false, .ml = 0, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 0,  .dr = 0,  .sl = 0,  .rr = 0 }, // 0(M)
+    {.am = false, .pm = false, .eg = false, .kr = false, .ml = 0, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 0,  .dr = 0,  .sl = 0,  .rr = 0 }, // 0(C)
+    // violin
+    {.am = false, .pm = true,  .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x1e, .wf = false, .fb = 7, .ar = 15, .dr = 0,  .sl = 0,  .rr = 0 }, // 1(M)
+    {.am = false, .pm = true,  .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = true,  .fb = 0, .ar = 7,  .dr = 15, .sl = 1,  .rr = 7 }, // 1(C)
+    // guitar
+    {.am = false, .pm = false, .eg = false, .kr = true,  .ml = 3, .kl = 0, .tl = 0x17, .wf = true,  .fb = 6, .ar = 15, .dr = 15, .sl = 2,  .rr = 3 }, // 2(M)
+    {.am = false, .pm = true,  .eg = false, .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 15, .sl = 1,  .rr = 3 }, // 2(C)
+    // piano
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 3, .kl = 2, .tl = 0x1a, .wf = false, .fb = 4, .ar = 10, .dr = 3,  .sl = 15, .rr = 0 }, // 3(M)
+    {.am = false, .pm = false, .eg = false, .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 4,  .sl = 2,  .rr = 3 }, // 3(C)
+    // flute
+    {.am = false, .pm = false, .eg = false, .kr = true,  .ml = 1, .kl = 0, .tl = 0x0e, .wf = false, .fb = 7, .ar = 15, .dr = 10, .sl = 7,  .rr = 0 }, // 4(M)
+    {.am = false, .pm = true,  .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 6,  .dr = 4,  .sl = 1,  .rr = 7 }, // 4(C)
+    // clarinet
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 2, .kl = 0, .tl = 0x1e, .wf = false, .fb = 6, .ar = 15, .dr = 0,  .sl = 0,  .rr = 0 }, // 5(M)
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 7,  .dr = 6,  .sl = 2,  .rr = 8 }, // 5(C)
+    // oboe
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x16, .wf = false, .fb = 5, .ar = 15, .dr = 0,  .sl = 0,  .rr = 0 }, // 6(M)
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 2, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 7,  .dr = 1,  .sl = 1,  .rr = 8 }, // 6(C)
+    // trumpet
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x1d, .wf = false, .fb = 7, .ar = 8,  .dr = 2,  .sl = 1,  .rr = 0 }, // 7(M)
+    {.am = false, .pm = true,  .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 8,  .dr = 0,  .sl = 0,  .rr = 7 }, // 7(C)
+    // organ
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 3, .kl = 0, .tl = 0x2d, .wf = false, .fb = 6, .ar = 9,  .dr = 0,  .sl = 0,  .rr = 0 }, // 8(M)
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = true,  .fb = 0, .ar = 9,  .dr = 0,  .sl = 0,  .rr = 7 }, // 8(C)
+    // horn
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x1b, .wf = false, .fb = 6, .ar = 6,  .dr = 4,  .sl = 1,  .rr = 0 }, // 9(M)
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 6,  .dr = 5,  .sl = 1,  .rr = 7 }, // 9(C)
+    // synthesizer
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x0b, .wf = true,  .fb = 2, .ar = 8,  .dr = 5,  .sl = 7,  .rr = 0 }, // 10(M)
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = true,  .fb = 0, .ar = 10, .dr = 0,  .sl = 0,  .rr = 7 }, // 10(C)
+    // harpsichord
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 3, .kl = 2, .tl = 0x02, .wf = false, .fb = 0, .ar = 15, .dr = 15, .sl = 1,  .rr = 0 }, // 11(M)
+    {.am = false, .pm = false, .eg = false, .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = true,  .fb = 0, .ar = 11, .dr = 0,  .sl = 0,  .rr = 4 }, // 11(C)
+    // vibraphone
+    {.am = true,  .pm = false, .eg = false, .kr = true,  .ml = 7, .kl = 0, .tl = 0x20, .wf = false, .fb = 7, .ar = 15, .dr = 15, .sl = 2,  .rr = 2 }, // 12(M)
+    {.am = true,  .pm = true,  .eg = false, .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 15, .sl = 1,  .rr = 2 }, // 12(C)
+    // synthesizer bass
+    {.am = false, .pm = true,  .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x0c, .wf = false, .fb = 5, .ar = 13, .dr = 2,  .sl = 4,  .rr = 0 }, // 13(M)
+    {.am = false, .pm = false, .eg = false, .kr = false, .ml = 0, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 6,  .sl = 4,  .rr = 3 }, // 13(C)
+    // acoustic bass
+    {.am = false, .pm = false, .eg = false, .kr = false, .ml = 1, .kl = 1, .tl = 0x16, .wf = false, .fb = 3, .ar = 15, .dr = 4,  .sl = 0,  .rr = 3 }, // 14(M)
+    {.am = false, .pm = false, .eg = false, .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 0,  .sl = 0,  .rr = 2 }, // 14(C)
+    // electric guitar
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 2, .tl = 0x09, .wf = false, .fb = 3, .ar = 15, .dr = 1,  .sl = 15, .rr = 0 }, // 15(M)
+    {.am = false, .pm = true,  .eg = false, .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 4,  .sl = 2,  .rr = 3 }, // 15(C)
+    // BD - Base Drum
+    {.am = false, .pm = false, .eg = false, .kr = false, .ml = 7, .kl = 0, .tl = 0x16, .wf = false, .fb = 0, .ar = 13, .dr = 15, .sl = 15, .rr = 15}, // BD(M)
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 8,  .sl = 15, .rr = 8 }, // BD(C)
+    // HH - High Hat / SD - Snare Drum
+    {.am = false, .pm = false, .eg = true,  .kr = true,  .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 7,  .sl = 15, .rr = 7 }, // HH
+    {.am = false, .pm = false, .eg = true,  .kr = true,  .ml = 2, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 7,  .sl = 15, .rr = 7 }, // SD
+    // TOM / CYM - Symbal
+    {.am = false, .pm = false, .eg = true,  .kr = false, .ml = 5, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 15, .dr = 8,  .sl = 15, .rr = 8 }, // TOM
+    {.am = false, .pm = false, .eg = false, .kr = false, .ml = 1, .kl = 0, .tl = 0x00, .wf = false, .fb = 0, .ar = 13, .dr = 12, .sl = 5,  .rr = 5 }, // CYM
 };
+
 
 YM2413::YM2413() :
     slot(18)
@@ -58,15 +97,9 @@ YM2413::YM2413() :
     ranges::fill(reg_key, 0);
     ranges::fill(reg_sustain, 0);
 
-    for (auto i : xrange(16 + 3)) {
-        patch[i<<1].reset();
-        patch[i<<1].initModulator(inst_data[i]);
-        patch[(i<<1)+1].reset();
-        patch[(i<<1)+1].initCarrier(inst_data[i]);
+    for (auto i : xrange((16 + 3)*2)) {
+        patch[i] = inst_data[i];
     }
-
-    // Fix for error in voice data for SD
-    patch[35].ml = 2;
 
     reset();
 }
